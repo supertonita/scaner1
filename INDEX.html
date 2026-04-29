@@ -121,14 +121,34 @@
             }
         }
 
-        // --- 3. LÓGICA DEL ESCÁNER ---
-        function initScanner() {
-            scanner.start(
-                { facingMode: "environment" }, 
-                { fps: 20, qrbox: { width: 250, height: 150 } }, 
-                onScan
-            ).catch(err => alert("Error de cámara: " + err));
-        }
+     // 1. Configuración con soporte total de formatos
+const scanner = new Html5Qrcode("reader", { 
+    verbose: false,
+    formatsToSupport: [ 
+        Html5QrcodeSupportedFormats.EAN_13, 
+        Html5QrcodeSupportedFormats.EAN_8, 
+        Html5QrcodeSupportedFormats.CODE_128, 
+        Html5QrcodeSupportedFormats.QR_CODE 
+    ]
+});
+
+// 2. Función de inicio optimizada para iPhone
+function initScanner() {
+    scanner.start(
+        { facingMode: "environment" }, 
+        { 
+            fps: 20, 
+            qrbox: { width: 250, height: 150 },
+            videoConstraints: {
+                facingMode: "environment",
+                focusMode: "continuous" // Ayuda al iPhone a enfocar mejor
+            }
+        }, 
+        onScan
+    ).catch(err => {
+        alert("Error: En iPhone usa SAFARI si Chrome falla, o revisa Configuración > Chrome > Cámara");
+    });
+}
 
         async function onScan(code) {
             currentCode = code;
