@@ -3,72 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario Pro Inteligente</title>
+    <title>Inventario Pro - Sistema Central</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
-        :root { --p: #2563eb; --s: #10b981; --bg: #f8fafc; }
-        body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
-        header { background: var(--p); color: white; padding: 15px; text-align: center; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        :root { --p: #2563eb; --s: #10b981; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+        header { background: var(--p); color: white; padding: 15px; text-align: center; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
         .container { padding: 15px; max-width: 500px; margin: auto; }
-        #reader { width: 100%; border-radius: 15px; overflow: hidden; border: 3px solid #ddd; background: #000; }
-        .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: none; text-align: center; }
-        .product-title { font-size: 1.2rem; font-weight: bold; }
-        .product-price { font-size: 2.5rem; color: var(--s); font-weight: 800; margin: 10px 0; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-        button:active { transform: scale(0.98); }
+        
+        /* Estilos del Escáner */
+        #reader { width: 100%; border-radius: 15px; overflow: hidden; border: 3px solid #cbd5e1; background: #000; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        /* Tarjeta de Resultados */
+        .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: none; text-align: center; border: 1px solid #e2e8f0; }
+        .product-title { font-size: 1.3rem; font-weight: 800; color: var(--p); text-transform: uppercase; }
+        .product-price { font-size: 2.8rem; color: var(--s); font-weight: 900; margin: 10px 0; }
+        
+        /* Botones y Formularios */
+        button { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: all 0.2s; font-size: 1rem; }
+        button:active { transform: scale(0.96); }
         .btn-blue { background: var(--p); color: white; }
         .btn-green { background: var(--s); color: white; }
+        .btn-gray { background: #64748b; color: white; }
+
+        /* Panel de Admin */
         #admin-panel { display: none; background: #fff; padding: 20px; border-radius: 15px; margin-top: 20px; border: 2px dashed var(--p); }
-        #login-screen { position: fixed; inset: 0; background: var(--p); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .loading-text { color: var(--p); font-weight: bold; margin: 10px 0; display: none; }
+        
+        /* Pantalla de Inicio (Login) */
+        #login-screen { position: fixed; inset: 0; background: var(--p); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; text-align: center; }
+        #login-screen input { padding: 18px; border-radius: 12px; border: none; text-align: center; font-size: 1.8rem; width: 200px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+
+        .progress-box { color: var(--p); font-weight: bold; margin: 15px 0; display: none; padding: 10px; background: #dbeafe; border-radius: 8px; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
-        <h2 style="color:white; margin-bottom: 5px;">Inventario Pro</h2>
-        <p style="color:rgba(255,255,255,0.8); margin-bottom: 20px;">Ingrese su PIN de acceso</p>
-        <input type="password" id="pin" placeholder="****" inputmode="numeric" style="padding:15px; border-radius:10px; border:none; text-align:center; font-size:1.5rem; width: 180px;">
-        <button onclick="access()" style="width:180px; background:white; color:var(--p); margin-top: 20px;">ENTRAR</button>
+        <h1 style="color:white; margin-bottom: 10px;">Inventario Pro</h1>
+        <p style="color:rgba(255,255,255,0.9); margin-bottom: 25px;">Ingrese su PIN de acceso</p>
+        <input type="password" id="pin" placeholder="****" inputmode="numeric" maxlength="4">
+        <button onclick="access()" style="width:200px; background:white; color:var(--p);">ENTRAR AL SISTEMA</button>
+        <p style="color:rgba(255,255,255,0.6); margin-top:30px; font-size:0.8rem;">Admin: 1234 | Usuario: 0000</p>
     </div>
 
-    <header id="app-header">CONSULTA DE PRECIOS</header>
+    <header id="app-header">SISTEMA DE INVENTARIO</header>
 
     <div class="container">
         <div id="reader"></div>
-        <p style="text-align:center; color:#64748b">Enfoque el código de barras para consultar</p>
+        <p style="text-align:center; color:#64748b; font-weight: 500;">Apunta al código de barras</p>
 
         <div id="result-card" class="card">
-            <div id="res-nombre" class="product-title">Nombre del Producto</div>
-            <div id="res-precio" class="product-price">$ 0.00</div>
-            <p id="res-stock" style="font-weight: bold;">Stock actual: 0</p>
+            <div id="res-nombre" class="product-title">Cargando...</div>
+            <div id="res-precio" class="product-price">$ 0</div>
+            <p id="res-stock" style="font-size: 1.1rem;">Stock: 0</p>
             
-            <div style="background:#f1f5f9; padding:15px; border-radius:10px; margin-bottom: 10px;">
-                <label style="font-size: 0.9rem;">¿Sumar existencias?</label><br>
-                <input type="number" id="qty" value="1" style="width:70px; padding:10px; margin:8px; border-radius: 5px; border: 1px solid #ccc; text-align: center;">
-                <button class="btn-green" onclick="addStock()">+ AGREGAR AL STOCK</button>
+            <div style="background:#f8fafc; padding:15px; border-radius:12px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                <label style="font-size: 0.85rem; color:#64748b;">¿CUÁNTOS DESEAS SUMAR?</label><br>
+                <input type="number" id="qty" value="1" style="width:100px; padding:12px; margin:10px; border-radius: 8px; border: 2px solid #cbd5e1; text-align: center; font-size: 1.2rem;">
+                <button class="btn-green" onclick="addStock()">+ ACTUALIZAR STOCK</button>
             </div>
             
-            <button class="btn-blue" onclick="resetScanner()">SIGUIENTE PRODUCTO</button>
+            <button class="btn-blue" onclick="resetScanner()">ESCANEARE OTRO</button>
         </div>
 
-        <button id="admin-btn" style="display:none; background:#475569; color:white; margin-top: 20px;" onclick="toggleAdmin()">⚙️ PANEL DE CARGA (ADMIN)</button>
+        <button id="admin-btn" style="display:none; margin-top: 30px;" class="btn-gray" onclick="toggleAdmin()">⚙️ CARGA MASIVA (EXCEL/CSV)</button>
 
         <div id="admin-panel">
-            <h3>Actualizar Base de Datos</h3>
-            <p style="font-size: 0.8rem; color: #666;">Seleccione su archivo CSV exportado de Excel.</p>
-            <input type="file" id="csvFile" accept=".csv" style="margin-bottom: 10px;">
-            <div id="loading-msg" class="loading-text">Subiendo productos... espera un momento.</div>
-            <button class="btn-green" onclick="uploadData()">🚀 INICIAR CARGA MASIVA</button>
+            <h3 style="margin-top:0">Cargar Base de Datos</h3>
+            <p style="font-size: 0.8rem; color: #64748b;">Asegúrate que el archivo tenga: <b>codigo, nombre, precio, stock</b></p>
+            <input type="file" id="csvFile" accept=".csv" style="display: block; margin: 15px 0;">
+            <div id="loading-msg" class="progress-box">Iniciando carga...</div>
+            <button class="btn-green" onclick="uploadData()">🚀 SUBIR A LA NUBE</button>
         </div>
     </div>
 
     <script>
-        // 1. CONFIGURACIÓN FIREBASE
+        // --- 1. CONFIGURACIÓN FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyA0DtznUYQLnCC94MvLRDFi-bOsPslCxbA",
             authDomain: "scarner-dc97a.firebaseapp.com",
@@ -80,31 +95,39 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        db.enablePersistence().catch(err => console.log("Modo offline activado"));
+        
+        // Persistencia para que funcione con internet inestable
+        db.enablePersistence().catch(() => console.log("Offline mode ready"));
 
         let currentCode = "";
         const scanner = new Html5Qrcode("reader");
 
-        // 2. SISTEMA DE ACCESO POR PIN
+        // --- 2. CONTROL DE ACCESO ---
         function access() {
             const p = document.getElementById('pin').value;
+            const header = document.getElementById('app-header');
+            
             if(p === "1234") { 
                 document.getElementById('admin-btn').style.display = 'block';
-                document.getElementById('app-header').innerText = "MODO ADMINISTRADOR";
+                header.innerText = "MODO ADMINISTRADOR";
                 document.getElementById('login-screen').style.display = 'none';
                 initScanner();
             } else if (p === "0000") {
-                document.getElementById('app-header').innerText = "MODO CONSULTA";
+                header.innerText = "MODO CONSULTA (USUARIO)";
                 document.getElementById('login-screen').style.display = 'none';
                 initScanner();
             } else {
-                alert("PIN incorrecto. Use 1234 para Admin o 0000 para Usuario.");
+                alert("PIN INCORRECTO. Intenta con 1234 o 0000.");
             }
         }
 
-        // 3. ESCÁNER
+        // --- 3. LÓGICA DEL ESCÁNER ---
         function initScanner() {
-            scanner.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 150 } }, onScan);
+            scanner.start(
+                { facingMode: "environment" }, 
+                { fps: 20, qrbox: { width: 250, height: 150 } }, 
+                onScan
+            ).catch(err => alert("Error de cámara: " + err));
         }
 
         async function onScan(code) {
@@ -120,35 +143,38 @@
                     const p = doc.data();
                     document.getElementById('res-nombre').innerText = p.nombre;
                     document.getElementById('res-precio').innerText = `$ ${p.precio}`;
-                    document.getElementById('res-stock').innerText = `Stock actual: ${p.stock || 0}`;
+                    document.getElementById('res-stock').innerText = `En inventario: ${p.stock || 0}`;
                 } else {
-                    document.getElementById('res-nombre').innerText = "PRODUCTO NUEVO / NO EXISTE";
+                    document.getElementById('res-nombre').innerText = "PRODUCTO NO REGISTRADO";
                     document.getElementById('res-precio').innerText = "---";
-                    document.getElementById('res-stock').innerText = "Código: " + code;
+                    document.getElementById('res-stock').innerText = "Código detectado: " + code;
                 }
             } catch (e) { console.error(e); }
         }
 
         function resetScanner() {
             document.getElementById('result-card').style.display = 'none';
+            document.getElementById('qty').value = 1;
             scanner.resume();
         }
 
-        // 4. ACTUALIZAR STOCK
+        // --- 4. SUMAR AL INVENTARIO ---
         async function addStock() {
             const n = parseInt(document.getElementById('qty').value);
-            if(isNaN(n)) return alert("Ingresa un número válido");
+            if(isNaN(n) || n === 0) return alert("Ingresa una cantidad válida");
             
             try {
                 await db.collection("productos").doc(currentCode).set({
                     stock: firebase.firestore.FieldValue.increment(n)
                 }, {merge: true});
-                alert("Inventario actualizado");
+                alert("¡Stock actualizado con éxito!");
                 resetScanner();
-            } catch (e) { alert("Error: Verifica las reglas de Firebase"); }
+            } catch (e) { 
+                alert("ERROR: No tienes permisos. Revisa las REGLAS en Firebase."); 
+            }
         }
 
-        // 5. CARGA MASIVA INTELIGENTE (CSV)
+        // --- 5. CARGA MASIVA (TRABAJA POR PAQUETES DE 450) ---
         function toggleAdmin() {
             const p = document.getElementById('admin-panel');
             p.style.display = p.style.display === 'none' ? 'block' : 'none';
@@ -156,39 +182,63 @@
 
         async function uploadData() {
             const file = document.getElementById('csvFile').files[0];
-            if(!file) return alert("Por favor selecciona un archivo CSV");
+            if(!file) return alert("Primero selecciona el archivo CSV");
 
             const loadingMsg = document.getElementById('loading-msg');
             loadingMsg.style.display = 'block';
+            loadingMsg.innerText = "Preparando carga masiva...";
 
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
                     const content = e.target.result;
-                    const separator = content.includes(';') ? ';' : ','; // Detecta automático ; o ,
+                    const separator = content.includes(';') ? ';' : ','; 
                     const lines = content.split("\n");
-                    const batch = db.batch();
-                    let count = 0;
                     
-                    for(let i=1; i<lines.length; i++) {
+                    let batch = db.batch();
+                    let count = 0;
+                    let totalProcessed = 0;
+                    
+                    for(let i = 1; i < lines.length; i++) {
                         const col = lines[i].split(separator);
-                        if(col.length >= 3 && col[0].trim() !== "") {
-                            const ref = db.collection("productos").doc(col[0].trim());
+                        
+                        if(col[0] && col[0].trim() !== "") {
+                            // Limpieza profunda de códigos (evita el error de segmentos "/" o ".")
+                            const cleanCode = col[0].trim()
+                                              .replace(/\//g, '-')
+                                              .replace(/\./g, '-')
+                                              .replace(/\s+/g, '_');
+                                              
+                            const ref = db.collection("productos").doc(cleanCode);
+                            
                             batch.set(ref, {
-                                nombre: col[1].trim(),
-                                precio: col[2].trim(),
-                                stock: parseInt(col[3]) || 0
+                                nombre: col[1] ? col[1].trim() : "Sin nombre",
+                                precio: col[2] ? col[2].trim() : "0",
+                                stock: col[3] ? (parseInt(col[3]) || 0) : 0
                             });
+
                             count++;
+                            totalProcessed++;
+
+                            // Enviamos paquetes de 450 para no bloquear Firebase
+                            if (count === 450) {
+                                await batch.commit();
+                                batch = db.batch();
+                                count = 0;
+                                loadingMsg.innerText = `Cargando: ${totalProcessed} productos...`;
+                            }
                         }
                     }
-                    await batch.commit();
+
+                    if (count > 0) await batch.commit();
+
                     loadingMsg.style.display = 'none';
-                    alert("¡ÉXITO! Se cargaron " + count + " productos correctamente.");
+                    alert(`¡CORONAMOS! Se actualizaron ${totalProcessed} productos correctamente.`);
                     toggleAdmin();
+                    
                 } catch (error) {
                     loadingMsg.style.display = 'none';
-                    alert("ERROR: " + error.message);
+                    alert("ERROR FATAL: " + error.message);
                 }
             };
             reader.readAsText(file);
