@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventario Pro - Carga Masiva</title>
+    <title>Inventario Pro - Full Control</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -16,19 +16,22 @@
         header { background: var(--p); color: white; padding: 18px; text-align: center; font-weight: bold; }
         .container { padding: 15px; max-width: 500px; margin: auto; }
         
-        /* Estilos de la Barra de Progreso Mejorada */
+        #reader { width: 100% !important; border-radius: 20px; overflow: hidden; border: 4px solid #cbd5e1; background: #000; }
+        
         .progress-box { background: white; padding: 15px; border-radius: 12px; border: 1px solid #cbd5e1; margin: 15px 0; display: none; }
-        .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 25px; overflow: hidden; position: relative; }
-        .progress-bar { width: 0%; height: 100%; background: var(--s); transition: width 0.2s ease-in-out; }
-        #prog-text { text-align: center; font-weight: bold; font-size: 0.9rem; margin-top: 8px; color: var(--p); }
+        .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 25px; overflow: hidden; }
+        .progress-bar { width: 0%; height: 100%; background: var(--s); transition: width 0.2s; }
 
         .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); display: none; border: 1px solid #e2e8f0; }
         .price-venta { font-size: 2.5rem; color: var(--s); font-weight: 900; text-align: center; }
         
-        input[type="file"] { width: 100%; margin: 10px 0; padding: 10px; background: #fff; border-radius: 8px; border: 1px solid #cbd5e1; }
+        .info-interna { background: #f1f5f9; padding: 12px; border-radius: 10px; margin: 10px 0; }
+        .admin-edit-panel input { width: 100%; padding: 12px; margin: 5px 0 12px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
+
         button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-blue { background: var(--p); color: white; }
         .btn-green { background: var(--s); color: white; }
+        .btn-gray { background: #64748b; color: white; }
 
         #login-screen { position: fixed; inset: 0; background: var(--p); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
         #login-screen input { padding: 18px; border-radius: 12px; border: none; text-align: center; font-size: 1.8rem; width: 180px; margin-bottom: 20px; }
@@ -42,37 +45,54 @@
         <button onclick="access()" style="width:180px; background:white; color:var(--p);">ENTRAR</button>
     </div>
 
-    <header>SISTEMA DE CARGA POR LOTES</header>
+    <header>SISTEMA DE GESTIÓN INTEGRAL</header>
 
     <div class="container">
         <div id="reader"></div>
 
         <div id="result-card" class="card">
-            <div id="res-nombre" style="font-weight:bold; text-align:center;">---</div>
-            <div id="res-precio-venta" class="price-venta">$ 0.00</div>
-            <button class="btn-blue" onclick="resetScanner()">CONTINUAR</button>
+            <div id="res-nombre" style="font-weight:bold; text-align:center; font-size: 1.2rem;">---</div>
+            <div id="res-precio" class="price-venta">$ 0.00</div>
+            
+            <div class="info-interna">
+                <div style="display:flex; justify-content:space-between"><span>Stock Actual:</span> <b id="res-stock">0</b></div>
+            </div>
+
+            <div id="admin-fields" style="display:none;" class="admin-edit-panel">
+                <label>Nombre del Producto:</label>
+                <input type="text" id="edit-name">
+                <label>Precio (Costo/Venta):</label>
+                <input type="number" id="edit-price">
+                <label>Agregar al Inventario:</label>
+                <input type="number" id="qty" value="0">
+                <button class="btn-green" onclick="saveData()">GUARDAR CAMBIOS</button>
+            </div>
+            
+            <button class="btn-blue" onclick="resetScanner()">CONTINUAR ESCANEANDO</button>
         </div>
 
-        <button id="admin-panel-btn" style="display:none;" class="btn-blue" onclick="togglePanel()">⚙️ PANEL DE CARGA</button>
+        <button id="admin-panel-btn" style="display:none;" class="btn-gray" onclick="togglePanel()">⚙️ PANEL ADMINISTRATIVO</button>
         
-        <div id="master-panel" style="display:none; background:white; padding:20px; border-radius:15px; margin-top:20px;">
-            <h3>Subir Inventario (CSV)</h3>
-            <p style="font-size:0.75rem; color:#64748b;">Formato: codigo;nombre;costo;venta</p>
+        <div id="master-panel" style="display:none; background:white; padding:20px; border-radius:15px; margin-top:20px; border: 1px solid #ddd;">
+            <h3>1. Carga Masiva (CSV)</h3>
+            <p style="font-size:0.75rem; color:#64748b;">Columnas: codigo;nombre;precio;stock</p>
             <input type="file" id="csvFile" accept=".csv">
             
             <div id="prog-box" class="progress-box">
-                <div class="progress-container">
-                    <div id="prog-bar" class="progress-bar"></div>
-                </div>
-                <p id="prog-text">Esperando inicio...</p>
+                <div class="progress-container"><div id="prog-bar" class="progress-bar"></div></div>
+                <p id="prog-text" style="text-align:center; font-size:0.8rem; margin-top:5px;"></p>
             </div>
 
-            <button class="btn-green" onclick="startBulkUpload()">🚀 INICIAR SUBIDA POR PARTES</button>
+            <button class="btn-blue" onclick="startBulkUpload()">🚀 INICIAR SUBIDA (POR PARTES)</button>
+            
+            <hr style="margin:20px 0;">
+            
+            <h3>2. Reportes para Declaración</h3>
+            <button class="btn-green" style="background:#1d6f42;" onclick="exportToExcel()">📊 EXPORTAR TODO A EXCEL</button>
         </div>
     </div>
 
     <script>
-        // CONFIGURACIÓN FIREBASE (Mantener igual)
         const firebaseConfig = {
             apiKey: "AIzaSyA0DtznUYQLnCC94MvLRDFi-bOsPslCxbA",
             authDomain: "scarner-dc97a.firebaseapp.com",
@@ -85,6 +105,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         let isAdmin = false;
+        let currentCode = "";
         const scanner = new Html5Qrcode("reader");
 
         function access() {
@@ -97,20 +118,49 @@
         }
 
         async function onScan(code) {
+            currentCode = code;
             await scanner.pause(true);
             const doc = await db.collection("productos").doc(code).get();
             document.getElementById('result-card').style.display = 'block';
+
             if(doc.exists) {
                 const p = doc.data();
                 document.getElementById('res-nombre').innerText = p.nombre;
-                document.getElementById('res-precio-venta').innerText = `$ ${parseFloat(p.precio_venta || 0).toLocaleString()}`;
+                document.getElementById('res-precio').innerText = `$ ${parseFloat(p.precio || 0).toLocaleString()}`;
+                document.getElementById('res-stock').innerText = p.stock || 0;
+                
+                if(isAdmin) {
+                    document.getElementById('admin-fields').style.display = 'block';
+                    document.getElementById('edit-name').value = p.nombre;
+                    document.getElementById('edit-price').value = p.precio;
+                }
             } else {
-                document.getElementById('res-nombre').innerText = "NO ENCONTRADO";
+                document.getElementById('res-nombre').innerText = "NUEVO PRODUCTO";
+                document.getElementById('res-precio').innerText = "$ 0";
+                document.getElementById('res-stock').innerText = "0";
+                if(isAdmin) {
+                    document.getElementById('admin-fields').style.display = 'block';
+                    document.getElementById('edit-name').value = "";
+                    document.getElementById('edit-price').value = "";
+                }
             }
+        }
+
+        async function saveData() {
+            const addQty = parseInt(document.getElementById('qty').value) || 0;
+            const data = {
+                nombre: document.getElementById('edit-name').value,
+                precio: parseFloat(document.getElementById('edit-price').value) || 0,
+                stock: firebase.firestore.FieldValue.increment(addQty)
+            };
+            await db.collection("productos").doc(currentCode).set(data, {merge: true});
+            alert("¡Actualizado!");
+            resetScanner();
         }
 
         function resetScanner() {
             document.getElementById('result-card').style.display = 'none';
+            document.getElementById('qty').value = 0;
             scanner.resume();
         }
 
@@ -119,17 +169,17 @@
             m.style.display = m.style.display === 'none' ? 'block' : 'none';
         }
 
-        // LÓGICA DE CARGA POR PARTES (RECURSIVA)
+        // CARGA MASIVA CON LOS CAMPOS: codigo, nombre, precio, stock
         function startBulkUpload() {
             const file = document.getElementById('csvFile').files[0];
-            if(!file) return alert("Selecciona el archivo CSV");
+            if(!file) return alert("Selecciona el archivo");
 
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const content = e.target.result;
                 const separator = content.includes(';') ? ';' : ',';
                 const lines = content.split(/\r?\n/).filter(l => l.trim() !== "");
-                const dataLines = lines.slice(1); // Quitamos cabecera
+                const dataLines = lines.slice(1);
                 
                 document.getElementById('prog-box').style.display = 'block';
                 processBatch(dataLines, 0, separator);
@@ -138,7 +188,7 @@
         }
 
         async function processBatch(lines, startIndex, separator) {
-            const batchSize = 200; // Subimos de 200 en 200 para no saturar
+            const batchSize = 250;
             const endIndex = Math.min(startIndex + batchSize, lines.length);
             const batch = db.batch();
 
@@ -148,35 +198,52 @@
                     const ref = db.collection("productos").doc(col[0].trim());
                     batch.set(ref, {
                         nombre: col[1] ? col[1].trim() : "Sin nombre",
-                        precio_costo: col[2] ? parseFloat(col[2].replace(',', '.')) : 0,
-                        precio_venta: col[3] ? parseFloat(col[3].replace(',', '.')) : 0,
-                        stock: 0
+                        precio: col[2] ? parseFloat(col[2].replace(',', '.')) : 0,
+                        stock: 0 // Siempre inicializa en 0 según tu requerimiento
                     }, { merge: true });
                 }
             }
 
-            try {
-                await batch.commit();
-                
-                // Actualizar barra
-                const processed = endIndex;
-                const total = lines.length;
-                const percent = Math.round((processed / total) * 100);
-                
-                document.getElementById('prog-bar').style.width = percent + "%";
-                document.getElementById('prog-text').innerText = `Procesado: ${processed} de ${total} (${percent}%)`;
+            await batch.commit();
+            const percent = Math.round((endIndex / lines.length) * 100);
+            document.getElementById('prog-bar').style.width = percent + "%";
+            document.getElementById('prog-text').innerText = `${endIndex} de ${lines.length} procesados`;
 
-                if (endIndex < lines.length) {
-                    // Llamada recursiva para el siguiente bloque
-                    setTimeout(() => processBatch(lines, endIndex, separator), 300); 
-                } else {
-                    document.getElementById('prog-text').innerText = "✅ CARGA COMPLETA";
-                    alert("¡Todo listo, parce! 4000+ productos actualizados.");
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Error en lote: " + err.message);
+            if (endIndex < lines.length) {
+                setTimeout(() => processBatch(lines, endIndex, separator), 200);
+            } else {
+                alert("Carga de 4000+ productos finalizada.");
+                document.getElementById('prog-box').style.display = 'none';
             }
+        }
+
+        // EXPORTACIÓN PARA DECLARACIÓN
+        async function exportToExcel() {
+            alert("Generando reporte, espera un momento...");
+            const snapshot = await db.collection("productos").get();
+            const data = [];
+            let granTotal = 0;
+
+            snapshot.forEach(doc => {
+                const p = doc.data();
+                const totalProducto = (p.precio || 0) * (p.stock || 0);
+                granTotal += totalProducto;
+                data.push({
+                    "Código": doc.id,
+                    "Nombre": p.nombre,
+                    "Precio": p.precio || 0,
+                    "Stock Actual": p.stock || 0,
+                    "Valor Total": totalProducto
+                });
+            });
+
+            data.push({}); // Fila vacía
+            data.push({ "Nombre": "TOTAL INVENTARIO", "Valor Total": granTotal });
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Declaracion");
+            XLSX.writeFile(wb, "Inventario_Declaracion.xlsx");
         }
     </script>
 </body>
