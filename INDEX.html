@@ -2,238 +2,99 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventario Pro - V6 Anti-Bloqueo</title>
-    
+    <title>Inventario Pro - Versión Estable</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-
     <style>
-        :root { --p: #2563eb; --s: #10b981; --bg: #f8fafc; }
-        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
-        header { background: var(--p); color: white; padding: 18px; text-align: center; font-weight: bold; }
-        .container { padding: 15px; max-width: 500px; margin: auto; }
-        
-        #reader { width: 100% !important; border-radius: 20px; overflow: hidden; border: 4px solid #cbd5e1; background: #000; }
-        
-        .progress-box { background: white; padding: 20px; border-radius: 15px; border: 1px solid #cbd5e1; margin: 20px 0; display: none; }
-        .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 15px; overflow: hidden; }
-        .progress-bar { width: 0%; height: 100%; background: var(--s); transition: width 0.3s; }
-
-        .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); display: none; border: 1px solid #e2e8f0; }
-        .price-tag { font-size: 2.5rem; color: var(--s); font-weight: 900; text-align: center; }
-        
-        input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; }
-        .btn-blue { background: var(--p); color: white; }
-        .btn-green { background: var(--s); color: white; }
-        .btn-dark { background: #1e293b; color: white; }
-
-        #login-screen { position: fixed; inset: 0; background: var(--p); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        #login-screen input { width: 180px; text-align: center; font-size: 1.8rem; margin-bottom: 20px; }
+        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; }
+        .card { background: white; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .progress-bg { background: #e9ecef; border-radius: 5px; margin: 15px 0; }
+        .progress-fill { background: #2563eb; height: 10px; width: 0%; border-radius: 5px; transition: 0.2s; }
+        button { width: 100%; padding: 15px; background: #2563eb; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        #status { text-align: center; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen">
-        <h1 style="color:white; margin-bottom:10px;">Inventario Pro</h1>
-        <input type="password" id="pin" placeholder="****" inputmode="numeric">
-        <button onclick="access()" style="width:180px; background:white; color:var(--p);">ENTRAR</button>
+<div class="card">
+    <h2>Carga Masiva de Productos</h2>
+    <input type="file" id="csvFile" accept=".csv" style="margin-bottom:20px;">
+    
+    <div class="progress-bg">
+        <div id="bar" class="progress-fill"></div>
     </div>
+    <div id="status">Esperando archivo...</div>
+    
+    <button id="btn" onclick="processFile()">ACTUALIZAR BASE DE DATOS</button>
+</div>
 
-    <header>SISTEMA DE GESTIÓN V6</header>
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyA0DtznUYQLnCC94MvLRDFi-bOsPslCxbA",
+        authDomain: "scarner-dc97a.firebaseapp.com",
+        projectId: "scarner-dc97a",
+        storageBucket: "scarner-dc97a.firebasestorage.app",
+        messagingSenderId: "457706973960",
+        appId: "1:457706973960:web:017a2bb1997748080c1abd"
+    };
 
-    <div class="container">
-        <div id="reader"></div>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-        <div id="result-card" class="card">
-            <div id="res-nombre" style="font-weight:bold; text-align:center; font-size: 1.2rem;">---</div>
-            <div id="res-precio" class="price-tag">$ 0.00</div>
-            <div style="text-align:center; background:#f1f5f9; padding:10px; border-radius:10px; margin-bottom:15px;">
-                Stock Actual: <b id="res-stock">0</b>
-            </div>
+    async function processFile() {
+        const file = document.getElementById('csvFile').files[0];
+        if(!file) return alert("Selecciona el archivo");
 
-            <div id="admin-fields" style="display:none;">
-                <label>Nombre:</label><input type="text" id="edit-name">
-                <label>Precio:</label><input type="number" id="edit-price">
-                <label>Sumar Stock:</label><input type="number" id="qty" value="0">
-                <button class="btn-green" onclick="saveData()">💾 GUARDAR</button>
-            </div>
-            <button class="btn-blue" onclick="resetScanner()">← VOLVER</button>
-        </div>
-
-        <button id="admin-panel-btn" style="display:none;" class="btn-dark" onclick="togglePanel()">⚙️ PANEL DE CONTROL</button>
+        document.getElementById('btn').disabled = true;
+        const reader = new FileReader();
         
-        <div id="master-panel" style="display:none; background:white; padding:20px; border-radius:15px; margin-top:20px; border:1px solid #ddd;">
-            <h3 style="margin-top:0;">Carga Masiva</h3>
-            <p style="font-size:0.75rem; color:#64748b;">codigo;nombre;precio;stock</p>
-            <input type="file" id="csvFile" accept=".csv">
+        reader.onload = async (e) => {
+            const lines = e.target.result.split(/\r?\n/).filter(l => l.trim().length > 0);
+            const data = lines.slice(1); // Quitar cabecera
+            const separator = lines[0].includes(';') ? ';' : ',';
             
-            <div id="prog-box" class="progress-box">
-                <div class="progress-container"><div id="prog-bar" class="progress-bar"></div></div>
-                <p id="prog-text" style="text-align:center; font-size:0.8rem; margin-top:10px; font-weight:bold; color:var(--p);"></p>
-            </div>
-
-            <button class="btn-blue" id="btnUpload" onclick="startUpload()">🚀 ACTUALIZAR TODO</button>
-            <button class="btn-green" style="background:#166534;" onclick="exportToExcel()">📊 EXPORTAR EXCEL</button>
-        </div>
-    </div>
-
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyA0DtznUYQLnCC94MvLRDFi-bOsPslCxbA",
-            authDomain: "scarner-dc97a.firebaseapp.com",
-            projectId: "scarner-dc97a",
-            storageBucket: "scarner-dc97a.firebasestorage.app",
-            messagingSenderId: "457706973960",
-            appId: "1:457706973960:web:017a2bb1997748080c1abd"
+            document.getElementById('status').innerText = "Iniciando carga...";
+            await uploadInBatches(data, separator);
         };
+        reader.readAsText(file);
+    }
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        let isAdmin = false;
-        let currentCode = "";
-        const scanner = new Html5Qrcode("reader");
-
-        function access() {
-            const pin = document.getElementById('pin').value;
-            if(pin === "1234") { isAdmin = true; document.getElementById('admin-panel-btn').style.display = 'block'; }
-            if(pin === "1234" || pin === "0000") {
-                document.getElementById('login-screen').style.display = 'none';
-                scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, onScan);
-            }
-        }
-
-        async function onScan(code) {
-            currentCode = code.trim();
-            await scanner.pause(true);
-            const doc = await db.collection("productos").doc(currentCode).get();
-            document.getElementById('result-card').style.display = 'block';
-
-            if(doc.exists) {
-                const p = doc.data();
-                document.getElementById('res-nombre').innerText = p.nombre || "Sin Nombre";
-                document.getElementById('res-precio').innerText = `$ ${parseFloat(p.precio || 0).toLocaleString()}`;
-                document.getElementById('res-stock').innerText = p.stock || 0;
-                if(isAdmin) {
-                    document.getElementById('admin-fields').style.display = 'block';
-                    document.getElementById('edit-name').value = p.nombre;
-                    document.getElementById('edit-price').value = p.precio;
-                }
-            } else {
-                document.getElementById('res-nombre').innerText = "NUEVO";
-                if(isAdmin) document.getElementById('admin-fields').style.display = 'block';
-            }
-        }
-
-        async function saveData() {
-            const addQty = parseInt(document.getElementById('qty').value) || 0;
-            const data = {
-                nombre: document.getElementById('edit-name').value.trim(),
-                precio: parseFloat(document.getElementById('edit-price').value) || 0,
-                stock: firebase.firestore.FieldValue.increment(addQty)
-            };
-            await db.collection("productos").doc(currentCode).set(data, {merge: true});
-            alert("✅ Guardado");
-            resetScanner();
-        }
-
-        function resetScanner() {
-            document.getElementById('result-card').style.display = 'none';
-            document.getElementById('qty').value = 0;
-            scanner.resume();
-        }
-
-        function togglePanel() {
-            const m = document.getElementById('master-panel');
-            m.style.display = m.style.display === 'none' ? 'block' : 'none';
-        }
-
-        // --- CARGA ULTRA-SEGURA ANTI-BLOQUEO ---
-        function startUpload() {
-            const file = document.getElementById('csvFile').files[0];
-            if(!file) return alert("Selecciona el archivo");
-
-            const btn = document.getElementById('btnUpload');
-            btn.disabled = true;
-            btn.innerText = "⏳ CARGANDO...";
-
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const content = e.target.result;
-                const separator = content.includes(';') ? ';' : ',';
-                const lines = content.split(/\r?\n/).filter(l => l.trim().length > 5);
-                const dataLines = lines.slice(1);
-                
-                document.getElementById('prog-box').style.display = 'block';
-                uploadRecursive(dataLines, 0, separator);
-            };
-            reader.readAsText(file);
-        }
-
-        async function uploadRecursive(lines, index, sep) {
-            // Bajamos a lotes de 50 para evitar el límite de cuota de Firebase
-            const batchSize = 50; 
-            const end = Math.min(index + batchSize, lines.length);
+    async function uploadInBatches(lines, sep) {
+        // Lote de 400 para estar seguros bajo el límite de 500 de Firebase
+        const batchSize = 400; 
+        
+        for (let i = 0; i < lines.length; i += batchSize) {
             const batch = db.batch();
+            const currentChunk = lines.slice(i, i + batchSize);
 
-            for (let i = index; i < end; i++) {
-                const cols = lines[i].split(sep);
-                const codigo = cols[0] ? cols[0].trim() : null;
-                if (codigo) {
-                    const ref = db.collection("productos").doc(codigo);
+            currentChunk.forEach(line => {
+                const cols = line.split(sep);
+                if(cols[0]) {
+                    const ref = db.collection("productos").doc(cols[0].trim());
                     batch.set(ref, {
-                        nombre: cols[1] ? cols[1].trim() : "Producto Sin Nombre",
-                        precio: cols[2] ? parseFloat(cols[2].replace(',', '.')) : 0,
+                        nombre: cols[1] ? cols[1].trim() : "Sin Nombre",
+                        precio: cols[2] ? parseFloat(cols[2].toString().replace(',', '.')) : 0,
                         stock: 0 
                     }, { merge: true });
                 }
-            }
+            });
 
             try {
                 await batch.commit();
-                const processed = end;
-                const percent = Math.round((processed / lines.length) * 100);
-                
-                document.getElementById('prog-bar').style.width = percent + "%";
-                document.getElementById('prog-text').innerText = `Procesado: ${processed} de ${lines.length} (${percent}%)`;
-
-                if (end < lines.length) {
-                    // Pausa más larga (500ms) para que Firebase no detecte saturación
-                    setTimeout(() => uploadRecursive(lines, end, sep), 500);
-                } else {
-                    alert("¡ÉXITO! Base de datos de " + lines.length + " cargada.");
-                    const btn = document.getElementById('btnUpload');
-                    btn.disabled = false;
-                    btn.innerText = "🚀 ACTUALIZAR TODO";
-                }
+                const progress = Math.min(((i + batchSize) / lines.length) * 100, 100);
+                document.getElementById('bar').style.width = progress + "%";
+                document.getElementById('status').innerText = `Cargado: ${Math.min(i + batchSize, lines.length)} de ${lines.length}`;
             } catch (err) {
-                console.error(err);
-                // Si Firebase nos frena, esperamos 2 segundos y reintentamos
-                setTimeout(() => uploadRecursive(lines, index, sep), 2000);
+                console.error("Error en este bloque:", err);
             }
         }
 
-        async function exportToExcel() {
-            const snap = await db.collection("productos").get();
-            const rows = [];
-            snap.forEach(doc => {
-                const p = doc.data();
-                rows.push({
-                    "CODIGO": doc.id,
-                    "PRODUCTO": p.nombre,
-                    "PRECIO UNT": p.precio || 0,
-                    "STOCK ACTUAL": p.stock || 0,
-                    "SUBTOTAL": (p.precio || 0) * (p.stock || 0)
-                });
-            });
-            const ws = XLSX.utils.json_to_sheet(rows);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Reporte");
-            XLSX.writeFile(wb, "Inventario_Contable.xlsx");
-        }
-    </script>
+        document.getElementById('status').innerText = "✅ CARGA COMPLETADA";
+        alert("¡Listo! Se procesaron todos los productos.");
+        document.getElementById('btn').disabled = false;
+    }
+</script>
+
 </body>
 </html>
