@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventario Pro - Contabilidad</title>
+    <title>Inventario Pro - Progress Bar</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
-        :root { --p: #2563eb; --s: #10b981; --bg: #f8fafc; --danger: #ef4444; }
+        :root { --p: #2563eb; --s: #10b981; --bg: #f8fafc; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
         header { background: var(--p); color: white; padding: 18px; text-align: center; font-weight: bold; }
         .container { padding: 15px; max-width: 500px; margin: auto; }
@@ -34,7 +34,11 @@
         #login-screen { position: fixed; inset: 0; background: var(--p); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
         #login-screen input { padding: 18px; border-radius: 12px; border: none; text-align: center; font-size: 1.8rem; width: 180px; margin-bottom: 20px; }
         
-        .status-msg { color: var(--p); font-weight: bold; margin: 10px 0; display: none; padding: 10px; background: #e0e7ff; border-radius: 8px; }
+        /* ESTILOS DE LA BARRA DE CARGA */
+        .progress-container { width: 100%; background-color: #e2e8f0; border-radius: 10px; margin: 15px 0; display: none; overflow: hidden; height: 25px; position: relative; }
+        .progress-bar { height: 100%; background-color: var(--s); width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; }
+        .progress-text { position: absolute; width: 100%; text-align: center; font-size: 0.8rem; font-weight: bold; color: #1e293b; }
+
         .reporte-resultado { background: #1e293b; color: #10b981; padding: 15px; border-radius: 10px; margin-top: 10px; font-family: monospace; display: none; text-align: left; }
     </style>
 </head>
@@ -56,11 +60,10 @@
             <div class="label-small">Precio de Venta</div>
             <div id="res-precio" class="product-price">$ 0</div>
             
-            <!-- SECCIÓN DE COSTO (Editable para Admin) -->
             <div id="costo-section" class="costo-box" style="display:none;">
-                <div class="label-small">Precio de Compra (Costo)</div>
-                <input type="number" id="input-costo" style="width:120px; padding:8px; border-radius:8px; border:1px solid #fb923c; text-align:center; font-size:1.2rem; color:#9a3412; font-weight:bold;">
-                <button onclick="updateCosto()" style="padding:8px; font-size:0.7rem; width:auto; margin-left:5px; background:#fb923c; color:white;">💾 GUARDAR COSTO</button>
+                <div class="label-small">Costo (Compra)</div>
+                <input type="number" id="input-costo" style="width:120px; padding:8px; border-radius:8px; border:1px solid #fb923c; text-align:center; font-size:1.2rem;">
+                <button onclick="updateCosto()" style="padding:8px; font-size:0.7rem; width:auto; background:#fb923c; color:white;">💾 GUARDAR</button>
             </div>
 
             <p id="res-stock" style="font-weight: bold; margin: 10px 0;">Stock Actual: 0</p>
@@ -70,23 +73,28 @@
                 <button class="btn-green" onclick="addStock()">SUMAR AL STOCK</button>
             </div>
             
-            <button class="btn-blue" onclick="resetScanner()">CONTINUAR ESCANEANDO</button>
+            <button class="btn-blue" onclick="resetScanner()">VOLVER A ESCANEAR</button>
         </div>
 
         <button id="admin-btn" style="display:none;" class="btn-gray" onclick="toggleAdmin()">⚙️ PANEL ADMINISTRADOR</button>
 
         <div id="admin-panel">
-            <h3>Reporte para Declaración</h3>
-            <button class="btn-black" onclick="generarReporte()">📊 CALCULAR TOTAL INVENTARIO</button>
+            <h3>Reporte Contable</h3>
+            <button class="btn-black" onclick="generarReporte()">📊 CALCULAR INVENTARIO TOTAL</button>
             <div id="reporte-caja" class="reporte-resultado"></div>
 
             <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
             
-            <h3>Carga Masiva (CSV)</h3>
-            <p style="font-size:0.7rem; color:gray;">Columnas: codigo, nombre, precio, stock, costo</p>
+            <h3>Actualizar Base de Datos</h3>
             <input type="file" id="csvFile" accept=".csv">
-            <div id="loading-msg" class="status-msg"></div>
-            <button class="btn-green" onclick="uploadData()">🚀 ACTUALIZAR TODO</button>
+            
+            <!-- CONTENEDOR DE LA BARRA -->
+            <div id="prog-container" class="progress-container">
+                <div id="prog-bar" class="progress-bar"></div>
+                <div id="prog-text" class="progress-text">0%</div>
+            </div>
+
+            <button class="btn-green" id="upload-btn" onclick="uploadData()">🚀 INICIAR SUBIDA</button>
         </div>
     </div>
 
@@ -110,78 +118,53 @@
             formatsToSupport: [ 
                 Html5QrcodeSupportedFormats.EAN_13, 
                 Html5QrcodeSupportedFormats.CODE_128, 
-                Html5QrcodeSupportedFormats.QR_CODE,
-                Html5QrcodeSupportedFormats.UPC_A
+                Html5QrcodeSupportedFormats.QR_CODE
             ]
         });
 
         function access() {
             const p = document.getElementById('pin').value;
-            if(p === "1234") { 
-                isAdmin = true;
-                document.getElementById('admin-btn').style.display = 'block';
-                document.getElementById('login-screen').style.display = 'none';
-                initScanner();
-            } else if (p === "0000") {
-                isAdmin = false;
-                document.getElementById('login-screen').style.display = 'none';
-                initScanner();
-            } else { alert("PIN Incorrecto"); }
+            if(p === "1234") { isAdmin = true; document.getElementById('admin-btn').style.display = 'block'; document.getElementById('login-screen').style.display = 'none'; initScanner(); }
+            else if (p === "0000") { isAdmin = false; document.getElementById('login-screen').style.display = 'none'; initScanner(); }
+            else { alert("PIN Incorrecto"); }
         }
 
         function initScanner() {
             scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: { width: 260, height: 160 } }, onScan)
-            .catch(err => alert("Error cámara. Usa Safari/HTTPS"));
+            .catch(err => alert("Error cámara."));
         }
 
         async function onScan(code) {
             currentCode = code;
             if (window.navigator.vibrate) window.navigator.vibrate(100);
             await scanner.pause(true);
-
             try {
                 const doc = await db.collection("productos").doc(code).get();
                 document.getElementById('result-card').style.display = 'block';
-
                 if(doc.exists) {
                     const p = doc.data();
                     document.getElementById('res-nombre').innerText = p.nombre;
                     document.getElementById('res-precio').innerText = `$ ${p.precio}`;
                     document.getElementById('res-stock').innerText = `Stock: ${p.stock || 0}`;
-                    
-                    // Solo el Admin ve y edita el costo
-                    if(isAdmin) {
-                        document.getElementById('costo-section').style.display = 'block';
-                        document.getElementById('input-costo').value = p.costo || 0;
-                    }
+                    if(isAdmin) { document.getElementById('costo-section').style.display = 'block'; document.getElementById('input-costo').value = p.costo || 0; }
                 } else {
-                    document.getElementById('res-nombre').innerText = "NUEVO PRODUCTO";
-                    document.getElementById('res-precio').innerText = "---";
+                    document.getElementById('res-nombre').innerText = "PRODUCTO NUEVO";
                     if(isAdmin) document.getElementById('costo-section').style.display = 'block';
                 }
             } catch (e) { console.error(e); }
         }
 
-        // Función para actualizar el precio de costo en caliente
         async function updateCosto() {
             const nuevoCosto = document.getElementById('input-costo').value;
-            try {
-                await db.collection("productos").doc(currentCode).set({
-                    costo: nuevoCosto
-                }, {merge: true});
-                alert("Precio de costo actualizado");
-            } catch (e) { alert("Error al guardar costo"); }
+            await db.collection("productos").doc(currentCode).set({ costo: nuevoCosto }, {merge: true});
+            alert("Costo guardado");
         }
 
         async function addStock() {
             const n = parseInt(document.getElementById('qty').value);
-            try {
-                await db.collection("productos").doc(currentCode).set({
-                    stock: firebase.firestore.FieldValue.increment(n)
-                }, {merge: true});
-                alert("Stock sumado");
-                resetScanner();
-            } catch (e) { alert("Error"); }
+            await db.collection("productos").doc(currentCode).set({ stock: firebase.firestore.FieldValue.increment(n) }, {merge: true});
+            alert("Stock actualizado");
+            resetScanner();
         }
 
         function resetScanner() {
@@ -195,70 +178,71 @@
             p.style.display = p.style.display === 'none' ? 'block' : 'none';
         }
 
-        // --- REPORTE DE DECLARACIÓN DE RENTA ---
         async function generarReporte() {
             const caja = document.getElementById('reporte-caja');
             caja.style.display = 'block';
-            caja.innerText = "Calculando... (esto puede tardar)";
-            
-            try {
-                const snapshot = await db.collection("productos").get();
-                let inversionTotal = 0;
-                let itemsContados = 0;
-
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const stock = parseFloat(data.stock) || 0;
-                    const costo = parseFloat(data.costo) || 0;
-                    
-                    if (stock > 0) {
-                        inversionTotal += (stock * costo);
-                        itemsContados++;
-                    }
-                });
-
-                caja.innerHTML = `
-                    <strong>REPORTES CONTABLES:</strong><br>
-                    ---------------------------<br>
-                    Artículos con stock: ${itemsContados}<br>
-                    VALOR TOTAL COMPRA: $ ${inversionTotal.toLocaleString()}<br>
-                    ---------------------------<br>
-                    <small>Este valor es el que debes presentar como activos en inventario.</small>
-                `;
-            } catch (e) {
-                alert("Error al generar reporte");
-            }
+            caja.innerText = "Calculando...";
+            const snapshot = await db.collection("productos").get();
+            let inversionTotal = 0;
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                inversionTotal += (parseFloat(data.stock) || 0) * (parseFloat(data.costo) || 0);
+            });
+            caja.innerHTML = `<strong>TOTAL INVENTARIO (COSTO):</strong><br>$ ${inversionTotal.toLocaleString()}`;
         }
 
-        // CARGA MASIVA (Ahora soporta columna COSTO)
+        // --- CARGA CON BARRA DE PROGRESO ---
         async function uploadData() {
             const file = document.getElementById('csvFile').files[0];
-            if(!file) return alert("Selecciona un CSV");
-            const msg = document.getElementById('loading-msg');
-            msg.style.display = 'block';
+            if(!file) return alert("Selecciona el archivo");
+
+            const container = document.getElementById('prog-container');
+            const bar = document.getElementById('prog-bar');
+            const text = document.getElementById('prog-text');
+            const btn = document.getElementById('upload-btn');
+
+            container.style.display = 'block';
+            btn.disabled = true;
+            btn.innerText = "Subiendo...";
+
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const lines = e.target.result.split("\n");
+                const lines = e.target.result.split("\n").filter(l => l.trim() !== "");
+                const totalLines = lines.length - 1; // Menos el encabezado
                 let batch = db.batch();
                 let count = 0;
+                let totalProcessed = 0;
+
                 for(let i = 1; i < lines.length; i++) {
                     const col = lines[i].split(lines[i].includes(';') ? ';' : ',');
                     if(col[0]) {
                         const cleanCode = col[0].trim().replace(/\//g, '-').replace(/\s+/g, '_');
-                        const ref = db.collection("productos").doc(cleanCode);
-                        batch.set(ref, {
+                        batch.set(db.collection("productos").doc(cleanCode), {
                             nombre: col[1] ? col[1].trim() : "---",
                             precio: col[2] ? col[2].trim() : "0",
                             stock: col[3] ? parseInt(col[3]) : 0,
-                            costo: col[4] ? col[4].trim() : "0" // NUEVA COLUMNA
+                            costo: col[4] ? col[4].trim() : "0"
                         });
                         count++;
-                        if (count === 450) { await batch.commit(); batch = db.batch(); count = 0; }
+                        totalProcessed++;
+
+                        if (count === 450 || i === lines.length - 1) {
+                            await batch.commit();
+                            batch = db.batch();
+                            count = 0;
+                            
+                            // ACTUALIZAR BARRA
+                            let porc = Math.round((totalProcessed / totalLines) * 100);
+                            bar.style.width = porc + "%";
+                            text.innerText = porc + "% (" + totalProcessed + " de " + totalLines + ")";
+                        }
                     }
                 }
-                await batch.commit();
-                msg.style.display = 'none';
-                alert("Base de datos sincronizada");
+                alert("¡Carga completada con éxito!");
+                container.style.display = 'none';
+                btn.disabled = false;
+                btn.innerText = "🚀 INICIAR SUBIDA";
+                toggleAdmin();
             };
             reader.readAsText(file);
         }
