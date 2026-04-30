@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventario Pro - V5 Final</title>
+    <title>Inventario Pro - V6 Anti-Bloqueo</title>
     
-    <!-- Librerías -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -19,7 +18,6 @@
         
         #reader { width: 100% !important; border-radius: 20px; overflow: hidden; border: 4px solid #cbd5e1; background: #000; }
         
-        /* Barra de progreso */
         .progress-box { background: white; padding: 20px; border-radius: 15px; border: 1px solid #cbd5e1; margin: 20px 0; display: none; }
         .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 15px; overflow: hidden; }
         .progress-bar { width: 0%; height: 100%; background: var(--s); transition: width 0.3s; }
@@ -27,10 +25,7 @@
         .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); display: none; border: 1px solid #e2e8f0; }
         .price-tag { font-size: 2.5rem; color: var(--s); font-weight: 900; text-align: center; }
         
-        .form-group { margin-bottom: 15px; }
-        label { font-size: 0.8rem; color: #64748b; font-weight: bold; }
         input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
-        
         button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; }
         .btn-blue { background: var(--p); color: white; }
         .btn-green { background: var(--s); color: white; }
@@ -48,7 +43,7 @@
         <button onclick="access()" style="width:180px; background:white; color:var(--p);">ENTRAR</button>
     </div>
 
-    <header>SISTEMA DE GESTIÓN V5</header>
+    <header>SISTEMA DE GESTIÓN V6</header>
 
     <div class="container">
         <div id="reader"></div>
@@ -61,28 +56,19 @@
             </div>
 
             <div id="admin-fields" style="display:none;">
-                <div class="form-group">
-                    <label>Nombre del Producto:</label>
-                    <input type="text" id="edit-name">
-                </div>
-                <div class="form-group">
-                    <label>Precio de Venta:</label>
-                    <input type="number" id="edit-price">
-                </div>
-                <div class="form-group">
-                    <label>Sumar al Inventario (+):</label>
-                    <input type="number" id="qty" value="0" style="color:var(--s); font-weight:bold;">
-                </div>
-                <button class="btn-green" onclick="saveData()">💾 GUARDAR CAMBIOS</button>
+                <label>Nombre:</label><input type="text" id="edit-name">
+                <label>Precio:</label><input type="number" id="edit-price">
+                <label>Sumar Stock:</label><input type="number" id="qty" value="0">
+                <button class="btn-green" onclick="saveData()">💾 GUARDAR</button>
             </div>
-            <button class="btn-blue" onclick="resetScanner()">← VOLVER A ESCANEAR</button>
+            <button class="btn-blue" onclick="resetScanner()">← VOLVER</button>
         </div>
 
         <button id="admin-panel-btn" style="display:none;" class="btn-dark" onclick="togglePanel()">⚙️ PANEL DE CONTROL</button>
         
         <div id="master-panel" style="display:none; background:white; padding:20px; border-radius:15px; margin-top:20px; border:1px solid #ddd;">
-            <h3 style="margin-top:0;">Carga Masiva Masiva</h3>
-            <p style="font-size:0.75rem; color:#64748b;">Columnas: <b>codigo;nombre;precio;stock</b></p>
+            <h3 style="margin-top:0;">Carga Masiva</h3>
+            <p style="font-size:0.75rem; color:#64748b;">codigo;nombre;precio;stock</p>
             <input type="file" id="csvFile" accept=".csv">
             
             <div id="prog-box" class="progress-box">
@@ -90,12 +76,8 @@
                 <p id="prog-text" style="text-align:center; font-size:0.8rem; margin-top:10px; font-weight:bold; color:var(--p);"></p>
             </div>
 
-            <button class="btn-blue" onclick="startUpload()">🚀 ACTUALIZAR TODA LA BASE</button>
-            
-            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
-            
-            <h3>Reportes</h3>
-            <button class="btn-green" style="background:#166534;" onclick="exportToExcel()">📊 EXPORTAR A EXCEL (CONTADOR)</button>
+            <button class="btn-blue" id="btnUpload" onclick="startUpload()">🚀 ACTUALIZAR TODO</button>
+            <button class="btn-green" style="background:#166534;" onclick="exportToExcel()">📊 EXPORTAR EXCEL</button>
         </div>
     </div>
 
@@ -141,12 +123,8 @@
                     document.getElementById('edit-price').value = p.precio;
                 }
             } else {
-                document.getElementById('res-nombre').innerText = "PRODUCTO NUEVO";
-                if(isAdmin) {
-                    document.getElementById('admin-fields').style.display = 'block';
-                    document.getElementById('edit-name').value = "";
-                    document.getElementById('edit-price').value = "";
-                }
+                document.getElementById('res-nombre').innerText = "NUEVO";
+                if(isAdmin) document.getElementById('admin-fields').style.display = 'block';
             }
         }
 
@@ -158,7 +136,7 @@
                 stock: firebase.firestore.FieldValue.increment(addQty)
             };
             await db.collection("productos").doc(currentCode).set(data, {merge: true});
-            alert("✅ ¡Actualizado correctamente!");
+            alert("✅ Guardado");
             resetScanner();
         }
 
@@ -173,10 +151,14 @@
             m.style.display = m.style.display === 'none' ? 'block' : 'none';
         }
 
-        // --- LÓGICA DE CARGA INFINITA (MÁS DE 2000+) ---
+        // --- CARGA ULTRA-SEGURA ANTI-BLOQUEO ---
         function startUpload() {
             const file = document.getElementById('csvFile').files[0];
-            if(!file) return alert("Por favor selecciona el archivo CSV primero.");
+            if(!file) return alert("Selecciona el archivo");
+
+            const btn = document.getElementById('btnUpload');
+            btn.disabled = true;
+            btn.innerText = "⏳ CARGANDO...";
 
             const reader = new FileReader();
             reader.onload = async (e) => {
@@ -192,7 +174,8 @@
         }
 
         async function uploadRecursive(lines, index, sep) {
-            const batchSize = 100; // Bloque pequeño para evitar bloqueos en iPhone
+            // Bajamos a lotes de 50 para evitar el límite de cuota de Firebase
+            const batchSize = 50; 
             const end = Math.min(index + batchSize, lines.length);
             const batch = db.batch();
 
@@ -204,7 +187,7 @@
                     batch.set(ref, {
                         nombre: cols[1] ? cols[1].trim() : "Producto Sin Nombre",
                         precio: cols[2] ? parseFloat(cols[2].replace(',', '.')) : 0,
-                        stock: 0 // Reset para conteo físico
+                        stock: 0 
                     }, { merge: true });
                 }
             }
@@ -218,38 +201,34 @@
                 document.getElementById('prog-text').innerText = `Procesado: ${processed} de ${lines.length} (${percent}%)`;
 
                 if (end < lines.length) {
-                    // Pausa de 200ms para liberar memoria del navegador
-                    setTimeout(() => uploadRecursive(lines, end, sep), 200);
+                    // Pausa más larga (500ms) para que Firebase no detecte saturación
+                    setTimeout(() => uploadRecursive(lines, end, sep), 500);
                 } else {
-                    document.getElementById('prog-text').innerText = "✅ CARGA COMPLETA EXITOSA";
-                    alert("¡Todo listo, parce! Base de datos de " + lines.length + " productos actualizada.");
+                    alert("¡ÉXITO! Base de datos de " + lines.length + " cargada.");
+                    const btn = document.getElementById('btnUpload');
+                    btn.disabled = false;
+                    btn.innerText = "🚀 ACTUALIZAR TODO";
                 }
             } catch (err) {
                 console.error(err);
-                alert("Error en la red. Reintentando lote...");
-                setTimeout(() => uploadRecursive(lines, index, sep), 1000);
+                // Si Firebase nos frena, esperamos 2 segundos y reintentamos
+                setTimeout(() => uploadRecursive(lines, index, sep), 2000);
             }
         }
 
         async function exportToExcel() {
             const snap = await db.collection("productos").get();
             const rows = [];
-            let totalGeneral = 0;
             snap.forEach(doc => {
                 const p = doc.data();
-                const total = (p.precio || 0) * (p.stock || 0);
-                totalGeneral += total;
                 rows.push({
                     "CODIGO": doc.id,
                     "PRODUCTO": p.nombre,
                     "PRECIO UNT": p.precio || 0,
                     "STOCK ACTUAL": p.stock || 0,
-                    "SUBTOTAL": total
+                    "SUBTOTAL": (p.precio || 0) * (p.stock || 0)
                 });
             });
-            rows.push({}); 
-            rows.push({ "PRODUCTO": "VALOR TOTAL INVENTARIO", "SUBTOTAL": totalGeneral });
-
             const ws = XLSX.utils.json_to_sheet(rows);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Reporte");
