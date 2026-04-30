@@ -3,35 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventario Pro - Fix Final</title>
+    <title>Inventario Pro - Versión PC & Móvil</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --p: #2563eb; --s: #10b981; --bg: #f8fafc; }
-        body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg); }
-        header { background: var(--p); color: white; padding: 18px; text-align: center; font-weight: bold; }
-        .container { padding: 15px; max-width: 500px; margin: auto; }
-        #reader { width: 100% !important; border-radius: 20px; overflow: hidden; background: #000; min-height: 250px; }
-        .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: none; text-align: center; }
-        button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; }
+        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
+        header { background: var(--p); color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        
+        #reader { width: 100% !important; border-radius: 15px; overflow: hidden; background: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        
+        .card { background: white; padding: 25px; border-radius: 15px; margin-top: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: none; text-align: center; border: 1px solid #e2e8f0; }
+        .card h2 { margin: 0; color: #1e293b; font-size: 1.4rem; }
+        .card h1 { color: var(--s); margin: 10px 0; font-size: 2.8rem; }
+        
+        button { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; transition: all 0.2s; }
+        button:active { transform: scale(0.98); }
         .btn-green { background: var(--s); color: white; }
-        .btn-gray { background: #64748b; color: white; }
+        .btn-gray { background: #64748b; color: white; margin-top: 20px; }
+        
         #admin-panel { display: none; background: #fff; padding: 20px; border-radius: 15px; margin-top: 20px; border: 2px dashed var(--p); }
         
-        /* BARRA DE CARGA */
-        .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; margin: 20px 0; display: none; height: 35px; position: relative; border: 1px solid #cbd5e1; }
-        #prog-bar { height: 100%; background: var(--s); width: 0%; transition: width 0.3s; border-radius: 9px; }
-        #prog-text { position: absolute; width: 100%; text-align: center; top: 8px; font-size: 0.9rem; font-weight: bold; color: #1e293b; }
-        #log-msg { font-size: 0.8rem; color: #2563eb; margin-top: 10px; font-weight: bold; text-align: center; }
+        /* BARRA DE PROGRESO */
+        .progress-container { width: 100%; background: #e2e8f0; border-radius: 50px; margin: 20px 0; display: none; height: 30px; position: relative; overflow: hidden; }
+        #prog-bar { height: 100%; background: linear-gradient(90deg, #10b981, #34d399); width: 0%; transition: width 0.3s; }
+        #prog-text { position: absolute; width: 100%; text-align: center; top: 6px; font-size: 0.85rem; font-weight: bold; color: #1e293b; }
+        
+        /* CONSOLA DE DEPURECIÓN */
+        #monitor-consola { 
+            background: #0f172a; color: #38bdf8; font-family: 'Courier New', monospace; 
+            font-size: 0.75rem; padding: 12px; border-radius: 8px; margin-top: 15px; 
+            height: 150px; overflow-y: auto; display: none; line-height: 1.4; border: 1px solid #334155;
+        }
     </style>
 </head>
 <body>
 
     <div id="login-screen" style="position:fixed; inset:0; background:var(--p); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1000;">
-        <h2 style="color:white">Acceso al Sistema</h2>
-        <input type="password" id="pin" placeholder="PIN" style="padding:15px; border-radius:10px; border:none; margin-bottom:15px; text-align:center; font-size: 1.2rem;">
-        <button onclick="access()" style="width:150px; background:white; color:var(--p)">ENTRAR</button>
+        <div style="background:white; padding:30px; border-radius:20px; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+            <h2 style="margin-top:0; color:var(--p)">Inventario Pro</h2>
+            <input type="password" id="pin" placeholder="PIN de Acceso" style="padding:15px; border-radius:10px; border:2px solid #e2e8f0; margin-bottom:15px; text-align:center; font-size: 1.2rem; width:100%; box-sizing:border-box;">
+            <button onclick="access()" class="btn-green">ENTRAR</button>
+        </div>
     </div>
 
     <header>SISTEMA DE INVENTARIO</header>
@@ -40,27 +55,27 @@
         <div id="reader"></div>
         
         <div id="result-card" class="card">
-            <h2 id="res-nombre" style="margin:0; color:#1e293b;"></h2>
-            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 10px;">Precio de Venta</div>
-            <h1 id="res-precio" style="color:var(--s); margin:0; font-size: 2.5rem;"></h1>
-            <p id="res-stock" style="font-weight:bold; font-size: 1.1rem;"></p>
-            <button class="btn-green" onclick="resetScanner()">VOLVER A ESCANEAR</button>
+            <h2 id="res-nombre"></h2>
+            <div style="font-size: 0.8rem; color: #64748b; margin-top: 10px;">PRECIO DE VENTA</div>
+            <h1 id="res-precio"></h1>
+            <p id="res-stock" style="font-size: 1.2rem; margin: 0;"></p>
+            <button class="btn-green" onclick="resetScanner()">SIGUIENTE ESCANEO</button>
         </div>
 
-        <button id="admin-btn" style="display:none;" class="btn-gray" onclick="toggleAdmin()">⚙️ PANEL DE CARGA</button>
+        <button id="admin-btn" style="display:none;" class="btn-gray" onclick="toggleAdmin()">⚙️ PANEL DE CARGA MASIVA</button>
 
         <div id="admin-panel">
-            <h3>Actualizar Base de Datos</h3>
-            <p style="font-size: 0.8rem; color: #64748b;">Selecciona tu archivo CSV exportado de Excel.</p>
-            <input type="file" id="csvFile" accept=".csv">
+            <h3 style="margin-top:0">Cargar Inventario (CSV)</h3>
+            <p style="font-size: 0.8rem; color: #64748b;">Columnas esperadas: Código | Nombre | Precio | Stock | Costo</p>
+            <input type="file" id="csvFile" accept=".csv" style="width:100%; margin:10px 0;">
             
-            <div id="log-msg"></div>
             <div id="prog-container" class="progress-container">
                 <div id="prog-bar"></div>
                 <div id="prog-text">0%</div>
             </div>
 
-            <button class="btn-green" id="upload-btn" onclick="uploadData()">🚀 SUBIR PRODUCTOS</button>
+            <button class="btn-green" id="upload-btn" onclick="uploadData()">🚀 INICIAR SUBIDA</button>
+            <div id="monitor-consola"></div>
         </div>
     </div>
 
@@ -84,6 +99,8 @@
                 document.getElementById('admin-btn').style.display = 'block';
                 document.getElementById('login-screen').style.display = 'none';
                 initScanner();
+            } else {
+                alert("PIN Incorrecto");
             }
         }
 
@@ -95,8 +112,7 @@
 
         async function onScan(code) {
             await scanner.pause(true);
-            // Limpiamos el código escaneado por si trae basura
-            const cleanScan = code.trim().replace(/[^a-zA-Z0-9]/g, '');
+            const cleanScan = code.trim().replace(/[^0-9]/g, ''); // Solo números del código de barras
             
             try {
                 const doc = await db.collection("productos").doc(cleanScan).get();
@@ -106,13 +122,13 @@
                     const p = doc.data();
                     document.getElementById('res-nombre').innerText = p.nombre;
                     document.getElementById('res-precio').innerText = `$${p.precio}`;
-                    document.getElementById('res-stock').innerText = `Stock: ${p.stock}`;
+                    document.getElementById('res-stock').innerText = `EXISTENCIAS: ${p.stock}`;
                 } else {
-                    document.getElementById('res-nombre').innerText = "PRODUCTO NO REGISTRADO";
+                    document.getElementById('res-nombre').innerText = "PRODUCTO NUEVO";
                     document.getElementById('res-precio').innerText = "---";
                     document.getElementById('res-stock').innerText = "ID: " + cleanScan;
                 }
-            } catch (e) { alert("Error al consultar base de datos"); }
+            } catch (e) { console.error(e); }
         }
 
         function resetScanner() {
@@ -125,80 +141,89 @@
             p.style.display = p.style.display === 'none' ? 'block' : 'none';
         }
 
-        // --- CARGA MASIVA AJUSTADA A TU EXCEL ---
+        // --- LÓGICA DE CARGA MASIVA REFORZADA ---
         async function uploadData() {
             const fileInput = document.getElementById('csvFile');
-            const log = document.getElementById('log-msg');
+            const monitor = document.getElementById('monitor-consola');
             const barContainer = document.getElementById('prog-container');
             const bar = document.getElementById('prog-bar');
             const text = document.getElementById('prog-text');
             const btn = document.getElementById('upload-btn');
 
-            if(!fileInput.files[0]) return alert("Selecciona el archivo .csv primero");
+            if(!fileInput.files[0]) return alert("Por favor selecciona tu archivo .csv");
 
+            // Preparar interfaz
             btn.disabled = true;
-            log.innerText = "Leyendo datos...";
+            monitor.style.display = 'block';
             barContainer.style.display = 'block';
+            monitor.innerHTML = "> [SISTEMA] Leyendo archivo...<br>";
 
             const reader = new FileReader();
-            reader.readAsText(fileInput.files[0]);
+            // CP1252 es el estándar de Excel en Windows (soporta tildes y ñ)
+            reader.readAsText(fileInput.files[0], 'CP1252');
 
             reader.onload = async (e) => {
                 try {
                     const content = e.target.result;
-                    // Dividir por líneas y quitar vacías
+                    // Dividir por líneas y filtrar vacías
                     const rows = content.split(/\r?\n/).filter(line => line.trim().length > 5);
                     const total = rows.length - 1;
+
+                    monitor.innerHTML += "> [INFO] Filas detectadas: " + rows.length + "<br>";
 
                     let batch = db.batch();
                     let count = 0;
                     let processed = 0;
 
-                    // Empezamos en 1 para saltar el encabezado (Código, nombre, precio...)
                     for (let i = 1; i < rows.length; i++) {
-                        // Detectar si el Excel usó , o ;
+                        // Detectar si el CSV usa coma o punto y coma
                         const delimiter = rows[i].includes(';') ? ';' : ',';
                         const cols = rows[i].split(delimiter);
                         
-                        // Validamos que exista un código en la primera columna
-                        if (cols[0] && cols[0].trim() !== "") {
-                            // Limpiamos el código de barras (quitar puntos, espacios o comas)
-                            const code = cols[0].trim().replace(/[^a-zA-Z0-9]/g, '');
+                        if (cols[0]) {
+                            // Limpiar código de barras (evitar formato científico 7.5E+11)
+                            const code = cols[0].trim().replace(/[^0-9]/g, '');
+                            
+                            if (code.length < 4) {
+                                monitor.innerHTML += `<span style="color:#f87171">> [ERROR] Fila ${i}: Código inválido (${cols[0]})</span><br>`;
+                                continue;
+                            }
+
                             const ref = db.collection("productos").doc(code);
                             
+                            // Mapeo: 0:Cod, 1:Nombre, 2:Precio, 3:Stock, 4:Costo
                             batch.set(ref, {
                                 nombre: (cols[1] || "Sin Nombre").trim(),
-                                precio: (cols[2] || "0").trim(),
+                                precio: (cols[2] || "0").trim().replace(',', '.'),
                                 stock: parseInt(cols[3]) || 0,
-                                costo: (cols[4] || "0").trim()
+                                costo: (cols[4] || "0").trim().replace(',', '.')
                             });
 
                             count++;
                             processed++;
 
-                            // Enviar a Firebase en bloques de 250 para no saturar
-                            if (count === 250 || i === rows.length - 1) {
+                            // Enviar en bloques de 300 para máxima velocidad sin errores
+                            if (count === 300 || i === rows.length - 1) {
                                 await batch.commit();
                                 batch = db.batch();
                                 count = 0;
                                 
-                                // Actualizar barra de progreso
+                                // Actualizar UI
                                 let porc = Math.round((processed / total) * 100);
                                 bar.style.width = porc + "%";
-                                text.innerText = `${porc}% (${processed} de ${total})`;
-                                log.innerText = "Subiendo a la nube...";
-                                
-                                // Pausa para que el navegador respire
-                                await new Promise(r => setTimeout(r, 200));
+                                text.innerText = `${porc}% (${processed} / ${total})`;
+                                monitor.innerHTML += `> [OK] Bloque procesado... (${processed})<br>`;
+                                monitor.scrollTop = monitor.scrollHeight;
+
+                                // Mini pausa para no congelar el navegador
+                                await new Promise(r => setTimeout(r, 60));
                             }
                         }
                     }
-                    log.innerText = "¡CARGA COMPLETADA!";
-                    log.style.color = "green";
-                    alert("Se actualizaron " + processed + " productos.");
-                    toggleAdmin();
+                    monitor.innerHTML += "<br><b style='color:#10b981'>> [ÉXITO] Base de datos actualizada correctamente.</b>";
+                    alert("¡Carga finalizada!");
                 } catch (err) {
-                    log.innerText = "Error: Verifica que el CSV sea correcto.";
+                    monitor.innerHTML += `<br><b style="color:#ef4444">!! ERROR CRÍTICO: ${err.message}</b>`;
                     console.error(err);
                 } finally {
                     btn.disabled = false;
