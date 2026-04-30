@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventario Pro - Fix Carga</title>
+    <title>Inventario Pro - Fix Final</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -12,55 +12,60 @@
         body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg); }
         header { background: var(--p); color: white; padding: 18px; text-align: center; font-weight: bold; }
         .container { padding: 15px; max-width: 500px; margin: auto; }
-        #reader { width: 100% !important; border-radius: 20px; overflow: hidden; background: #000; }
+        #reader { width: 100% !important; border-radius: 20px; overflow: hidden; background: #000; min-height: 250px; }
         .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: none; text-align: center; }
-        button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; }
         .btn-green { background: var(--s); color: white; }
         .btn-gray { background: #64748b; color: white; }
         #admin-panel { display: none; background: #fff; padding: 20px; border-radius: 15px; margin-top: 20px; border: 2px dashed var(--p); }
         
-        /* BARRA DE CARGA MEJORADA */
-        .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; margin: 20px 0; display: none; height: 30px; position: relative; border: 1px solid #cbd5e1; }
-        #prog-bar { height: 100%; background: var(--s); width: 0%; transition: width 0.2s; border-radius: 9px; }
-        #prog-text { position: absolute; width: 100%; text-align: center; top: 5px; font-size: 0.85rem; font-weight: bold; color: #1e293b; }
-        #debug-msg { font-size: 0.8rem; color: var(--p); text-align: center; margin-bottom: 5px; font-weight: bold; }
+        /* BARRA DE CARGA */
+        .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; margin: 20px 0; display: none; height: 35px; position: relative; border: 1px solid #cbd5e1; }
+        #prog-bar { height: 100%; background: var(--s); width: 0%; transition: width 0.3s; border-radius: 9px; }
+        #prog-text { position: absolute; width: 100%; text-align: center; top: 8px; font-size: 0.9rem; font-weight: bold; color: #1e293b; }
+        #log-msg { font-size: 0.8rem; color: #2563eb; margin-top: 10px; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
 
     <div id="login-screen" style="position:fixed; inset:0; background:var(--p); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1000;">
-        <input type="password" id="pin" placeholder="PIN" style="padding:15px; border-radius:10px; border:none; margin-bottom:15px; text-align:center;">
-        <button onclick="access()" style="width:150px; background:white;">ENTRAR</button>
+        <h2 style="color:white">Acceso al Sistema</h2>
+        <input type="password" id="pin" placeholder="PIN" style="padding:15px; border-radius:10px; border:none; margin-bottom:15px; text-align:center; font-size: 1.2rem;">
+        <button onclick="access()" style="width:150px; background:white; color:var(--p)">ENTRAR</button>
     </div>
 
-    <header>INVENTARIO PRO</header>
+    <header>SISTEMA DE INVENTARIO</header>
 
     <div class="container">
         <div id="reader"></div>
+        
         <div id="result-card" class="card">
-            <h2 id="res-nombre"></h2>
-            <h1 id="res-precio" style="color:var(--s)"></h1>
-            <p id="res-stock"></p>
-            <button class="btn-green" onclick="resetScanner()">SIGUIENTE</button>
+            <h2 id="res-nombre" style="margin:0; color:#1e293b;"></h2>
+            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 10px;">Precio de Venta</div>
+            <h1 id="res-precio" style="color:var(--s); margin:0; font-size: 2.5rem;"></h1>
+            <p id="res-stock" style="font-weight:bold; font-size: 1.1rem;"></p>
+            <button class="btn-green" onclick="resetScanner()">VOLVER A ESCANEAR</button>
         </div>
 
-        <button id="admin-btn" style="display:none;" class="btn-gray" onclick="toggleAdmin()">⚙️ PANEL ADMIN</button>
+        <button id="admin-btn" style="display:none;" class="btn-gray" onclick="toggleAdmin()">⚙️ PANEL DE CARGA</button>
 
         <div id="admin-panel">
-            <h3>Carga Masiva</h3>
-            <input type="file" id="csvFile" accept=".csv" style="margin-bottom:10px;">
+            <h3>Actualizar Base de Datos</h3>
+            <p style="font-size: 0.8rem; color: #64748b;">Selecciona tu archivo CSV exportado de Excel.</p>
+            <input type="file" id="csvFile" accept=".csv">
             
-            <div id="debug-msg"></div>
+            <div id="log-msg"></div>
             <div id="prog-container" class="progress-container">
                 <div id="prog-bar"></div>
                 <div id="prog-text">0%</div>
             </div>
 
-            <button class="btn-green" id="upload-btn" onclick="uploadData()">🚀 SUBIR A FIREBASE</button>
+            <button class="btn-green" id="upload-btn" onclick="uploadData()">🚀 SUBIR PRODUCTOS</button>
         </div>
     </div>
 
     <script>
+        // CONFIGURACIÓN FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyA0DtznUYQLnCC94MvLRDFi-bOsPslCxbA",
             authDomain: "scarner-dc97a.firebaseapp.com",
@@ -71,13 +76,11 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        let currentCode = "";
 
         const scanner = new Html5Qrcode("reader");
 
         function access() {
-            const p = document.getElementById('pin').value;
-            if(p === "1234") { 
+            if(document.getElementById('pin').value === "1234") { 
                 document.getElementById('admin-btn').style.display = 'block';
                 document.getElementById('login-screen').style.display = 'none';
                 initScanner();
@@ -85,23 +88,31 @@
         }
 
         function initScanner() {
-            scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (code) => {
+            scanner.start({ facingMode: "environment" }, { fps: 15, qrbox: {width: 250, height: 150} }, (code) => {
                 onScan(code);
-            }).catch(e => console.log(e));
+            }).catch(e => console.error(e));
         }
 
         async function onScan(code) {
             await scanner.pause(true);
-            const doc = await db.collection("productos").doc(code).get();
-            document.getElementById('result-card').style.display = 'block';
-            if(doc.exists) {
-                const p = doc.data();
-                document.getElementById('res-nombre').innerText = p.nombre;
-                document.getElementById('res-precio').innerText = `$${p.precio}`;
-                document.getElementById('res-stock').innerText = `Stock: ${p.stock}`;
-            } else {
-                document.getElementById('res-nombre').innerText = "NO ENCONTRADO";
-            }
+            // Limpiamos el código escaneado por si trae basura
+            const cleanScan = code.trim().replace(/[^a-zA-Z0-9]/g, '');
+            
+            try {
+                const doc = await db.collection("productos").doc(cleanScan).get();
+                document.getElementById('result-card').style.display = 'block';
+                
+                if(doc.exists) {
+                    const p = doc.data();
+                    document.getElementById('res-nombre').innerText = p.nombre;
+                    document.getElementById('res-precio').innerText = `$${p.precio}`;
+                    document.getElementById('res-stock').innerText = `Stock: ${p.stock}`;
+                } else {
+                    document.getElementById('res-nombre').innerText = "PRODUCTO NO REGISTRADO";
+                    document.getElementById('res-precio').innerText = "---";
+                    document.getElementById('res-stock').innerText = "ID: " + cleanScan;
+                }
+            } catch (e) { alert("Error al consultar base de datos"); }
         }
 
         function resetScanner() {
@@ -114,76 +125,85 @@
             p.style.display = p.style.display === 'none' ? 'block' : 'none';
         }
 
-        // --- CARGA MASIVA REPARADA ---
+        // --- CARGA MASIVA AJUSTADA A TU EXCEL ---
         async function uploadData() {
-            const file = document.getElementById('csvFile').files[0];
-            if(!file) return alert("Selecciona el CSV");
-
+            const fileInput = document.getElementById('csvFile');
+            const log = document.getElementById('log-msg');
             const barContainer = document.getElementById('prog-container');
             const bar = document.getElementById('prog-bar');
             const text = document.getElementById('prog-text');
-            const debug = document.getElementById('debug-msg');
             const btn = document.getElementById('upload-btn');
 
+            if(!fileInput.files[0]) return alert("Selecciona el archivo .csv primero");
+
             btn.disabled = true;
-            debug.innerText = "Leyendo archivo...";
-            
+            log.innerText = "Leyendo datos...";
+            barContainer.style.display = 'block';
+
             const reader = new FileReader();
+            reader.readAsText(fileInput.files[0]);
+
             reader.onload = async (e) => {
-                const content = e.target.result;
-                const lines = content.split(/\r?\n/).filter(l => l.trim() !== "");
-                const total = lines.length - 1;
-                
-                barContainer.style.display = 'block';
-                debug.innerText = "Iniciando subida a Firebase...";
+                try {
+                    const content = e.target.result;
+                    // Dividir por líneas y quitar vacías
+                    const rows = content.split(/\r?\n/).filter(line => line.trim().length > 5);
+                    const total = rows.length - 1;
 
-                let batch = db.batch();
-                let count = 0;
-                let processed = 0;
+                    let batch = db.batch();
+                    let count = 0;
+                    let processed = 0;
 
-                for (let i = 1; i < lines.length; i++) {
-                    const col = lines[i].split(lines[i].includes(';') ? ';' : ',');
-                    
-                    if (col[0]) {
-                        // Limpiar el código de barras de caracteres extraños (BOM)
-                        const rawCode = col[0].trim().replace(/[^\w\s-]/gi, '');
-                        const ref = db.collection("productos").doc(rawCode);
+                    // Empezamos en 1 para saltar el encabezado (Código, nombre, precio...)
+                    for (let i = 1; i < rows.length; i++) {
+                        // Detectar si el Excel usó , o ;
+                        const delimiter = rows[i].includes(';') ? ';' : ',';
+                        const cols = rows[i].split(delimiter);
                         
-                        batch.set(ref, {
-                            nombre: col[1] ? col[1].trim() : "Sin nombre",
-                            precio: col[2] ? col[2].trim() : "0",
-                            stock: col[3] ? parseInt(col[3]) : 0,
-                            costo: col[4] ? col[4].trim() : "0"
-                        });
-
-                        count++;
-                        processed++;
-
-                        // Cada 400 productos, enviamos el lote y actualizamos la interfaz
-                        if (count === 400 || i === lines.length - 1) {
-                            await batch.commit();
+                        // Validamos que exista un código en la primera columna
+                        if (cols[0] && cols[0].trim() !== "") {
+                            // Limpiamos el código de barras (quitar puntos, espacios o comas)
+                            const code = cols[0].trim().replace(/[^a-zA-Z0-9]/g, '');
+                            const ref = db.collection("productos").doc(code);
                             
-                            // Actualizar barra
-                            let porc = Math.round((processed / total) * 100);
-                            bar.style.width = porc + "%";
-                            text.innerText = `${porc}% (${processed} de ${total})`;
-                            debug.innerText = "Subiendo datos... no cierre la página";
+                            batch.set(ref, {
+                                nombre: (cols[1] || "Sin Nombre").trim(),
+                                precio: (cols[2] || "0").trim(),
+                                stock: parseInt(cols[3]) || 0,
+                                costo: (cols[4] || "0").trim()
+                            });
 
-                            batch = db.batch();
-                            count = 0;
-                            
-                            // Truco: Pausa de 100ms para que el navegador pueda dibujar el progreso
-                            await new Promise(resolve => setTimeout(resolve, 100));
+                            count++;
+                            processed++;
+
+                            // Enviar a Firebase en bloques de 250 para no saturar
+                            if (count === 250 || i === rows.length - 1) {
+                                await batch.commit();
+                                batch = db.batch();
+                                count = 0;
+                                
+                                // Actualizar barra de progreso
+                                let porc = Math.round((processed / total) * 100);
+                                bar.style.width = porc + "%";
+                                text.innerText = `${porc}% (${processed} de ${total})`;
+                                log.innerText = "Subiendo a la nube...";
+                                
+                                // Pausa para que el navegador respire
+                                await new Promise(r => setTimeout(r, 200));
+                            }
                         }
                     }
+                    log.innerText = "¡CARGA COMPLETADA!";
+                    log.style.color = "green";
+                    alert("Se actualizaron " + processed + " productos.");
+                    toggleAdmin();
+                } catch (err) {
+                    log.innerText = "Error: Verifica que el CSV sea correcto.";
+                    console.error(err);
+                } finally {
+                    btn.disabled = false;
                 }
-
-                debug.innerText = "¡TODO LISTO!";
-                debug.style.color = "green";
-                btn.disabled = false;
-                alert("Base de datos cargada correctamente");
             };
-            reader.readAsText(file);
         }
     </script>
 </body>
