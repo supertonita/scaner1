@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventario & Precios Pro</title>
+    <title>Inventario Pro - 4000+ Items</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -13,30 +13,26 @@
     <style>
         :root { --p: #2563eb; --s: #10b981; --bg: #f8fafc; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
-        header { background: var(--p); color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 1.1rem; }
+        header { background: var(--p); color: white; padding: 18px; text-align: center; font-weight: bold; }
         .container { padding: 15px; max-width: 500px; margin: auto; }
         
         #reader { width: 100% !important; border-radius: 20px; overflow: hidden; border: 4px solid #cbd5e1; background: #000; }
         
         .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); display: none; border: 1px solid #e2e8f0; }
+        .product-title { font-size: 1.4rem; font-weight: 800; text-align: center; }
+        .price-venta { font-size: 2.8rem; color: var(--s); font-weight: 900; text-align: center; }
         
-        /* Estilos de Precios */
-        .product-title { font-size: 1.4rem; font-weight: 800; color: #1e293b; text-align: center; margin-bottom: 5px; }
-        .price-venta-label { font-size: 0.9rem; color: #64748b; text-align: center; font-weight: bold; }
-        .price-venta { font-size: 2.8rem; color: var(--s); font-weight: 900; text-align: center; margin-bottom: 15px; }
-        
-        .info-interna { background: #f1f5f9; padding: 12px; border-radius: 10px; margin: 10px 0; border-left: 4px solid var(--p); }
-        .info-row { display: flex; justify-content: space-between; font-size: 0.95rem; margin: 5px 0; }
+        /* Barra de Progreso */
+        .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; margin: 15px 0; display: none; height: 20px; overflow: hidden; }
+        .progress-bar { width: 0%; height: 100%; background: var(--s); transition: width 0.3s; }
 
-        .admin-edit-panel { border-top: 2px solid #e2e8f0; margin-top: 15px; padding-top: 15px; display: none; }
-        .admin-edit-panel label { font-size: 0.8rem; font-weight: bold; color: #475569; }
+        .info-interna { background: #f1f5f9; padding: 12px; border-radius: 10px; margin: 10px 0; border-left: 4px solid var(--p); }
         .admin-edit-panel input { width: 100%; padding: 12px; margin: 5px 0 12px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
 
-        button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; }
+        button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-blue { background: var(--p); color: white; }
         .btn-green { background: var(--s); color: white; }
-        .btn-gray { background: #64748b; color: white; }
-
+        
         #login-screen { position: fixed; inset: 0; background: var(--p); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
         #login-screen input { padding: 18px; border-radius: 12px; border: none; text-align: center; font-size: 1.8rem; width: 180px; margin-bottom: 20px; }
     </style>
@@ -44,65 +40,54 @@
 <body>
 
     <div id="login-screen">
-        <h1 style="color:white; margin-bottom: 10px;">Inventario Pro</h1>
+        <h1 style="color:white;">Inventario Pro</h1>
         <input type="password" id="pin" placeholder="PIN" inputmode="numeric">
         <button onclick="access()" style="width:180px; background:white; color:var(--p);">ENTRAR</button>
     </div>
 
-    <header>CONSULTOR DE PRECIOS & INVENTARIO</header>
+    <header>CONSULTA & INVENTARIO</header>
 
     <div class="container">
         <div id="reader"></div>
 
+        <!-- TARJETA DE RESULTADO -->
         <div id="result-card" class="card">
-            <!-- VISTA CLIENTE -->
             <div id="res-nombre" class="product-title">---</div>
-            <div class="price-venta-label">PRECIO AL PÚBLICO</div>
             <div id="res-precio-venta" class="price-venta">$ 0.00</div>
 
-            <!-- VISTA INTERNA (COSTO Y STOCK) -->
             <div class="info-interna">
-                <div class="info-row">
-                    <span>Precio Costo:</span>
-                    <b id="res-precio-costo">$ 0.00</b>
-                </div>
-                <div class="info-row">
-                    <span>Stock Disponible:</span>
-                    <b id="res-stock">0 unidades</b>
-                </div>
+                <div style="display:flex; justify-content:space-between"><span>Costo:</span> <b id="res-precio-costo">$0</b></div>
+                <div style="display:flex; justify-content:space-between"><span>Stock:</span> <b id="res-stock">0</b></div>
             </div>
 
-            <!-- PANEL DE EDICIÓN Y CARGA (ADMIN) -->
-            <div id="admin-fields" class="admin-edit-panel">
-                <label>Editar Nombre:</label>
-                <input type="text" id="edit-name">
+            <div id="admin-fields" style="display:none;" class="admin-edit-panel">
+                <label>Nombre:</label><input type="text" id="edit-name">
                 <div style="display:flex; gap:10px;">
-                    <div style="flex:1">
-                        <label>P. Costo:</label>
-                        <input type="number" id="edit-cost">
-                    </div>
-                    <div style="flex:1">
-                        <label>P. Venta:</label>
-                        <input type="number" id="edit-price">
-                    </div>
+                    <div style="flex:1"><label>Costo:</label><input type="number" id="edit-cost"></div>
+                    <div style="flex:1"><label>Venta:</label><input type="number" id="edit-price"></div>
                 </div>
-                <label>Sumar al Inventario (Cantidad):</label>
-                <input type="number" id="qty" value="0">
-                <button class="btn-green" onclick="saveData()">ACTUALIZAR PRODUCTO</button>
+                <label>Sumar Stock:</label><input type="number" id="qty" value="0">
+                <button class="btn-green" onclick="saveData()">ACTUALIZAR DATOS</button>
             </div>
-
-            <button class="btn-blue" onclick="resetScanner()">VOLVER A ESCANEAR</button>
+            <button class="btn-blue" onclick="resetScanner()">CONTINUAR</button>
         </div>
 
-        <button id="admin-panel-btn" style="display:none;" class="btn-gray" onclick="togglePanel()">⚙️ EXPORTAR / CARGA MASIVA</button>
+        <button id="admin-panel-btn" style="display:none;" class="btn-blue" style="background:#64748b" onclick="togglePanel()">⚙️ OPCIONES AVANZADAS</button>
         
-        <div id="master-panel" style="display:none; background:white; padding:20px; border-radius:15px; margin-top:20px; border:1px solid #ddd;">
-            <h3>Reportes de Inventario</h3>
-            <button class="btn-green" style="background:#1d6f42;" onclick="exportToExcel()">📊 DESCARGAR EXCEL (PARA DECLARACIÓN)</button>
-            <hr>
-            <h3>Inicializar con Stock 0</h3>
+        <div id="master-panel" style="display:none; background:white; padding:20px; border-radius:15px; margin-top:20px;">
+            <h3>Carga Masiva (4000+ Items)</h3>
+            <p style="font-size:0.8rem; color:gray;">Formato CSV: codigo;nombre;costo;venta</p>
             <input type="file" id="csvFile" accept=".csv">
-            <button class="btn-blue" onclick="bulkUpload()">🚀 SUBIR ARCHIVO</button>
+            
+            <!-- BARRA DE PROGRESO -->
+            <div id="prog-cont" class="progress-container">
+                <div id="prog-bar" class="progress-bar"></div>
+            </div>
+            <p id="prog-text" style="text-align:center; font-size:0.8rem; display:none;"></p>
+
+            <button class="btn-blue" onclick="bulkUpload()">🚀 INICIAR CARGA PESADA</button>
+            <hr>
+            <button class="btn-green" onclick="exportToExcel()">📊 EXPORTAR TODO A EXCEL</button>
         </div>
     </div>
 
@@ -120,14 +105,25 @@
         const db = firebase.firestore();
         let isAdmin = false;
         let currentCode = "";
-        const scanner = new Html5Qrcode("reader");
+
+        // ESCÁNER CON TODOS LOS FORMATOS ACTIVADOS
+        const scanner = new Html5Qrcode("reader", { 
+            formatsToSupport: [ 
+                Html5QrcodeSupportedFormats.EAN_13, 
+                Html5QrcodeSupportedFormats.EAN_8, 
+                Html5QrcodeSupportedFormats.CODE_128, 
+                Html5QrcodeSupportedFormats.UPC_A, 
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ] 
+        });
 
         function access() {
             const pin = document.getElementById('pin').value;
             if(pin === "1234") { isAdmin = true; document.getElementById('admin-panel-btn').style.display = 'block'; }
             if(pin === "1234" || pin === "0000") {
                 document.getElementById('login-screen').style.display = 'none';
-                scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, onScan);
+                scanner.start({ facingMode: "environment" }, { fps: 25, qrbox: {width: 250, height: 150} }, onScan);
             } else { alert("PIN Incorrecto"); }
         }
 
@@ -142,7 +138,7 @@
                 document.getElementById('res-nombre').innerText = p.nombre;
                 document.getElementById('res-precio-venta').innerText = `$ ${parseFloat(p.precio_venta || 0).toLocaleString()}`;
                 document.getElementById('res-precio-costo').innerText = `$ ${parseFloat(p.precio_costo || 0).toLocaleString()}`;
-                document.getElementById('res-stock').innerText = `${p.stock || 0} unidades`;
+                document.getElementById('res-stock').innerText = `${p.stock || 0} unid.`;
                 
                 if(isAdmin) {
                     document.getElementById('admin-fields').style.display = 'block';
@@ -151,26 +147,21 @@
                     document.getElementById('edit-price').value = p.precio_venta;
                 }
             } else {
-                document.getElementById('res-nombre').innerText = "PRODUCTO NUEVO";
-                if(isAdmin) {
-                    document.getElementById('admin-fields').style.display = 'block';
-                    document.getElementById('edit-name').value = "";
-                    document.getElementById('edit-cost').value = "";
-                    document.getElementById('edit-price').value = "";
-                }
+                document.getElementById('res-nombre').innerText = "NUEVO: " + code;
+                if(isAdmin) document.getElementById('admin-fields').style.display = 'block';
             }
         }
 
         async function saveData() {
             const addQty = parseInt(document.getElementById('qty').value) || 0;
             const data = {
-                nombre: document.getElementById('edit-name').value.trim(),
+                nombre: document.getElementById('edit-name').value,
                 precio_costo: parseFloat(document.getElementById('edit-cost').value) || 0,
                 precio_venta: parseFloat(document.getElementById('edit-price').value) || 0,
                 stock: firebase.firestore.FieldValue.increment(addQty)
             };
             await db.collection("productos").doc(currentCode).set(data, {merge: true});
-            alert("Guardado exitoso");
+            alert("Actualizado");
             resetScanner();
         }
 
@@ -185,58 +176,75 @@
             m.style.display = m.style.display === 'none' ? 'block' : 'none';
         }
 
-        async function exportToExcel() {
-            const snapshot = await db.collection("productos").get();
-            const excelData = [];
-            let totalInversion = 0;
-
-            snapshot.forEach(doc => {
-                const p = doc.data();
-                const subtotal = (p.precio_costo || 0) * (p.stock || 0);
-                totalInversion += subtotal;
-                excelData.push({
-                    "Código": doc.id,
-                    "Descripción": p.nombre,
-                    "P. Costo": p.precio_costo || 0,
-                    "P. Venta": p.precio_venta || 0,
-                    "Stock": p.stock || 0,
-                    "Valor Total (Costo)": subtotal
-                });
-            });
-
-            // Añadir fila de resumen al final
-            excelData.push({});
-            excelData.push({ "Descripción": "TOTAL INVENTARIO", "Valor Total (Costo)": totalInversion });
-
-            const ws = XLSX.utils.json_to_sheet(excelData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Inventario");
-            XLSX.writeFile(wb, "Inventario_Contable.xlsx");
-        }
-
+        // CARGA MASIVA CON BARRA DE PROGRESO
         async function bulkUpload() {
             const file = document.getElementById('csvFile').files[0];
-            if(!file) return alert("Sube un CSV");
+            if(!file) return alert("Selecciona el archivo CSV");
+
+            const progCont = document.getElementById('prog-cont');
+            const progBar = document.getElementById('prog-bar');
+            const progText = document.getElementById('prog-text');
+
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const lines = e.target.result.split("\n");
+                const lines = e.target.result.split("\n").filter(l => l.trim() !== "");
+                const total = lines.length - 1;
+                
+                progCont.style.display = 'block';
+                progText.style.display = 'block';
+                
                 let batch = db.batch();
+                let count = 0;
+                let processed = 0;
+
                 for(let i = 1; i < lines.length; i++) {
                     const col = lines[i].split(lines[i].includes(';') ? ';' : ',');
                     if(col[0]) {
                         const ref = db.collection("productos").doc(col[0].trim());
                         batch.set(ref, {
-                            nombre: col[1] ? col[1].trim() : "Sin nombre",
-                            precio_costo: col[2] ? parseFloat(col[2]) : 0,
-                            precio_venta: col[3] ? parseFloat(col[3]) : 0,
-                            stock: 0 // <--- Siempre inicializa en 0
+                            nombre: col[1]?.trim() || "Sin nombre",
+                            precio_costo: parseFloat(col[2]) || 0,
+                            precio_venta: parseFloat(col[3]) || 0,
+                            stock: 0
                         }, {merge: true});
+                        
+                        count++;
+                        processed++;
+
+                        // Firebase permite hasta 500 operaciones por lote
+                        if (count === 400) {
+                            await batch.commit();
+                            batch = db.batch();
+                            count = 0;
+                            
+                            // Actualizar barra
+                            const percent = Math.round((processed / total) * 100);
+                            progBar.style.width = percent + "%";
+                            progText.innerText = `Subiendo: ${processed} de ${total} (${percent}%)`;
+                        }
                     }
                 }
-                await batch.commit();
-                alert("Base de datos cargada con stock en 0.");
+                
+                if (count > 0) await batch.commit();
+                
+                progBar.style.width = "100%";
+                progText.innerText = "¡CARGA COMPLETADA EXITOSAMENTE!";
+                alert("Se han procesado " + processed + " productos.");
             };
             reader.readAsText(file);
+        }
+
+        async function exportToExcel() {
+            const snapshot = await db.collection("productos").get();
+            const data = snapshot.docs.map(doc => ({
+                Codigo: doc.id,
+                ...doc.data(),
+                Total_Invertido: (doc.data().precio_costo || 0) * (doc.data().stock || 0)
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+            XLSX.writeFile(wb, "Inventario_Completo.xlsx");
         }
     </script>
 </body>
