@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventario Pro - Full Control</title>
+    <title>Inventario Pro V4</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -18,77 +18,65 @@
         
         #reader { width: 100% !important; border-radius: 20px; overflow: hidden; border: 4px solid #cbd5e1; background: #000; }
         
-        .progress-box { background: white; padding: 15px; border-radius: 12px; border: 1px solid #cbd5e1; margin: 15px 0; display: none; }
-        .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 25px; overflow: hidden; }
-        .progress-bar { width: 0%; height: 100%; background: var(--s); transition: width 0.2s; }
+        /* Barra de progreso */
+        .progress-box { background: white; padding: 20px; border-radius: 15px; border: 1px solid #cbd5e1; margin: 20px 0; display: none; }
+        .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 15px; overflow: hidden; }
+        .progress-bar { width: 0%; height: 100%; background: var(--s); transition: width 0.3s; }
 
         .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); display: none; border: 1px solid #e2e8f0; }
-        .price-venta { font-size: 2.5rem; color: var(--s); font-weight: 900; text-align: center; }
+        .price-tag { font-size: 2.5rem; color: var(--s); font-weight: 900; text-align: center; }
         
-        .info-interna { background: #f1f5f9; padding: 12px; border-radius: 10px; margin: 10px 0; }
-        .admin-edit-panel input { width: 100%; padding: 12px; margin: 5px 0 12px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
-
+        input { width: 100%; padding: 12px; margin: 5px 0 15px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
         button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-blue { background: var(--p); color: white; }
         .btn-green { background: var(--s); color: white; }
-        .btn-gray { background: #64748b; color: white; }
+        .btn-dark { background: #1e293b; color: white; }
 
         #login-screen { position: fixed; inset: 0; background: var(--p); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        #login-screen input { padding: 18px; border-radius: 12px; border: none; text-align: center; font-size: 1.8rem; width: 180px; margin-bottom: 20px; }
+        #login-screen input { width: 180px; text-align: center; font-size: 1.8rem; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <h1 style="color:white;">Inventario Pro</h1>
-        <input type="password" id="pin" placeholder="PIN" inputmode="numeric">
+        <input type="password" id="pin" placeholder="****" inputmode="numeric">
         <button onclick="access()" style="width:180px; background:white; color:var(--p);">ENTRAR</button>
     </div>
 
-    <header>SISTEMA DE GESTIÓN INTEGRAL</header>
+    <header>SISTEMA DINÁMICO DE INVENTARIO</header>
 
     <div class="container">
         <div id="reader"></div>
 
         <div id="result-card" class="card">
-            <div id="res-nombre" style="font-weight:bold; text-align:center; font-size: 1.2rem;">---</div>
-            <div id="res-precio" class="price-venta">$ 0.00</div>
-            
-            <div class="info-interna">
-                <div style="display:flex; justify-content:space-between"><span>Stock Actual:</span> <b id="res-stock">0</b></div>
-            </div>
+            <div id="res-nombre" style="font-weight:bold; text-align:center;">---</div>
+            <div id="res-precio" class="price-tag">$ 0.00</div>
+            <div style="text-align:center; margin-bottom:15px;">Stock: <b id="res-stock">0</b></div>
 
-            <div id="admin-fields" style="display:none;" class="admin-edit-panel">
-                <label>Nombre del Producto:</label>
-                <input type="text" id="edit-name">
-                <label>Precio (Costo/Venta):</label>
-                <input type="number" id="edit-price">
-                <label>Agregar al Inventario:</label>
-                <input type="number" id="qty" value="0">
+            <div id="admin-fields" style="display:none;">
+                <label>Nombre:</label><input type="text" id="edit-name">
+                <label>Precio:</label><input type="number" id="edit-price">
+                <label>Sumar al Stock:</label><input type="number" id="qty" value="0">
                 <button class="btn-green" onclick="saveData()">GUARDAR CAMBIOS</button>
             </div>
-            
-            <button class="btn-blue" onclick="resetScanner()">CONTINUAR ESCANEANDO</button>
+            <button class="btn-blue" onclick="resetScanner()">CONTINUAR</button>
         </div>
 
-        <button id="admin-panel-btn" style="display:none;" class="btn-gray" onclick="togglePanel()">⚙️ PANEL ADMINISTRATIVO</button>
+        <button id="admin-panel-btn" style="display:none;" class="btn-dark" onclick="togglePanel()">⚙️ CONFIGURACIÓN</button>
         
-        <div id="master-panel" style="display:none; background:white; padding:20px; border-radius:15px; margin-top:20px; border: 1px solid #ddd;">
-            <h3>1. Carga Masiva (CSV)</h3>
-            <p style="font-size:0.75rem; color:#64748b;">Columnas: codigo;nombre;precio;stock</p>
+        <div id="master-panel" style="display:none; background:white; padding:20px; border-radius:15px; margin-top:20px;">
+            <h3>Carga de Base de Datos</h3>
+            <p style="font-size:0.8rem; color:gray;">Formato: codigo;nombre;precio;stock</p>
             <input type="file" id="csvFile" accept=".csv">
             
             <div id="prog-box" class="progress-box">
                 <div class="progress-container"><div id="prog-bar" class="progress-bar"></div></div>
-                <p id="prog-text" style="text-align:center; font-size:0.8rem; margin-top:5px;"></p>
+                <p id="prog-text" style="text-align:center; font-size:0.8rem; margin-top:10px;"></p>
             </div>
 
-            <button class="btn-blue" onclick="startBulkUpload()">🚀 INICIAR SUBIDA (POR PARTES)</button>
-            
-            <hr style="margin:20px 0;">
-            
-            <h3>2. Reportes para Declaración</h3>
-            <button class="btn-green" style="background:#1d6f42;" onclick="exportToExcel()">📊 EXPORTAR TODO A EXCEL</button>
+            <button class="btn-blue" onclick="startUpload()">🚀 CARGAR / ACTUALIZAR BASE</button>
+            <button class="btn-green" style="background:#166534;" onclick="exportToExcel()">📊 EXPORTAR A EXCEL</button>
         </div>
     </div>
 
@@ -118,9 +106,9 @@
         }
 
         async function onScan(code) {
-            currentCode = code;
+            currentCode = code.trim();
             await scanner.pause(true);
-            const doc = await db.collection("productos").doc(code).get();
+            const doc = await db.collection("productos").doc(currentCode).get();
             document.getElementById('result-card').style.display = 'block';
 
             if(doc.exists) {
@@ -128,33 +116,26 @@
                 document.getElementById('res-nombre').innerText = p.nombre;
                 document.getElementById('res-precio').innerText = `$ ${parseFloat(p.precio || 0).toLocaleString()}`;
                 document.getElementById('res-stock').innerText = p.stock || 0;
-                
                 if(isAdmin) {
                     document.getElementById('admin-fields').style.display = 'block';
                     document.getElementById('edit-name').value = p.nombre;
                     document.getElementById('edit-price').value = p.precio;
                 }
             } else {
-                document.getElementById('res-nombre').innerText = "NUEVO PRODUCTO";
-                document.getElementById('res-precio').innerText = "$ 0";
-                document.getElementById('res-stock').innerText = "0";
-                if(isAdmin) {
-                    document.getElementById('admin-fields').style.display = 'block';
-                    document.getElementById('edit-name').value = "";
-                    document.getElementById('edit-price').value = "";
-                }
+                document.getElementById('res-nombre').innerText = "NUEVO";
+                if(isAdmin) document.getElementById('admin-fields').style.display = 'block';
             }
         }
 
         async function saveData() {
             const addQty = parseInt(document.getElementById('qty').value) || 0;
             const data = {
-                nombre: document.getElementById('edit-name').value,
+                nombre: document.getElementById('edit-name').value.trim(),
                 precio: parseFloat(document.getElementById('edit-price').value) || 0,
                 stock: firebase.firestore.FieldValue.increment(addQty)
             };
             await db.collection("productos").doc(currentCode).set(data, {merge: true});
-            alert("¡Actualizado!");
+            alert("Guardado");
             resetScanner();
         }
 
@@ -169,8 +150,8 @@
             m.style.display = m.style.display === 'none' ? 'block' : 'none';
         }
 
-        // CARGA MASIVA CON LOS CAMPOS: codigo, nombre, precio, stock
-        function startBulkUpload() {
+        // --- CARGA DINÁMICA ---
+        function startUpload() {
             const file = document.getElementById('csvFile').files[0];
             if(!file) return alert("Selecciona el archivo");
 
@@ -178,72 +159,65 @@
             reader.onload = async (e) => {
                 const content = e.target.result;
                 const separator = content.includes(';') ? ';' : ',';
-                const lines = content.split(/\r?\n/).filter(l => l.trim() !== "");
-                const dataLines = lines.slice(1);
+                // Detectamos líneas reales y evitamos errores por filas vacías
+                const lines = content.split(/\r?\n/).filter(l => l.trim().length > 2);
+                const dataLines = lines.slice(1); // Quitamos la cabecera
                 
+                if(dataLines.length === 0) return alert("El archivo está vacío");
+
                 document.getElementById('prog-box').style.display = 'block';
-                processBatch(dataLines, 0, separator);
+                uploadRecursive(dataLines, 0, separator);
             };
             reader.readAsText(file);
         }
 
-        async function processBatch(lines, startIndex, separator) {
+        async function uploadRecursive(lines, index, sep) {
             const batchSize = 250;
-            const endIndex = Math.min(startIndex + batchSize, lines.length);
+            const end = Math.min(index + batchSize, lines.length);
             const batch = db.batch();
 
-            for (let i = startIndex; i < endIndex; i++) {
-                const col = lines[i].split(separator);
-                if (col[0]) {
-                    const ref = db.collection("productos").doc(col[0].trim());
+            for (let i = index; i < end; i++) {
+                const c = lines[i].split(sep);
+                if (c[0]) {
+                    const ref = db.collection("productos").doc(c[0].trim());
                     batch.set(ref, {
-                        nombre: col[1] ? col[1].trim() : "Sin nombre",
-                        precio: col[2] ? parseFloat(col[2].replace(',', '.')) : 0,
-                        stock: 0 // Siempre inicializa en 0 según tu requerimiento
+                        nombre: c[1] ? c[1].trim() : "Producto Nuevo",
+                        precio: c[2] ? parseFloat(c[2].replace(',', '.')) : 0,
+                        stock: 0 // Según tu regla, se resetea para conteo manual
                     }, { merge: true });
                 }
             }
 
             await batch.commit();
-            const percent = Math.round((endIndex / lines.length) * 100);
+            const percent = Math.round((end / lines.length) * 100);
             document.getElementById('prog-bar').style.width = percent + "%";
-            document.getElementById('prog-text').innerText = `${endIndex} de ${lines.length} procesados`;
+            document.getElementById('prog-text').innerText = `Procesando: ${end} de ${lines.length}`;
 
-            if (endIndex < lines.length) {
-                setTimeout(() => processBatch(lines, endIndex, separator), 200);
+            if (end < lines.length) {
+                setTimeout(() => uploadRecursive(lines, end, sep), 100);
             } else {
-                alert("Carga de 4000+ productos finalizada.");
+                alert("¡Base de datos actualizada! " + lines.length + " items listos.");
                 document.getElementById('prog-box').style.display = 'none';
             }
         }
 
-        // EXPORTACIÓN PARA DECLARACIÓN
         async function exportToExcel() {
-            alert("Generando reporte, espera un momento...");
-            const snapshot = await db.collection("productos").get();
-            const data = [];
-            let granTotal = 0;
-
-            snapshot.forEach(doc => {
+            const snap = await db.collection("productos").get();
+            const rows = [];
+            snap.forEach(doc => {
                 const p = doc.data();
-                const totalProducto = (p.precio || 0) * (p.stock || 0);
-                granTotal += totalProducto;
-                data.push({
-                    "Código": doc.id,
-                    "Nombre": p.nombre,
-                    "Precio": p.precio || 0,
-                    "Stock Actual": p.stock || 0,
-                    "Valor Total": totalProducto
+                rows.push({
+                    "CODIGO": doc.id,
+                    "NOMBRE": p.nombre,
+                    "PRECIO": p.precio || 0,
+                    "STOCK": p.stock || 0,
+                    "TOTAL": (p.precio || 0) * (p.stock || 0)
                 });
             });
-
-            data.push({}); // Fila vacía
-            data.push({ "Nombre": "TOTAL INVENTARIO", "Valor Total": granTotal });
-
-            const ws = XLSX.utils.json_to_sheet(data);
+            const ws = XLSX.utils.json_to_sheet(rows);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Declaracion");
-            XLSX.writeFile(wb, "Inventario_Declaracion.xlsx");
+            XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+            XLSX.writeFile(wb, "Inventario_Total.xlsx");
         }
     </script>
 </body>
