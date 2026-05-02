@@ -50,6 +50,17 @@
         <div id="scan-status" style="margin-top: 15px; font-size: 0.9rem; color: #64748b; text-align: center; height: 20px; font-weight: 500;">
             Esperando código...
         </div>
+
+        <div style="background: white; padding: 20px; border-radius: 15px; margin-top: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <h4 style="margin-top:0; color: #475569; font-size: 0.9rem;">🔍 Búsqueda Manual</h4>
+            <div style="display: flex; gap: 10px; align-items: flex-end;">
+                <div class="input-group" style="margin: 0; flex: 1;">
+                    <label>Escribe el código de barras</label>
+                    <input type="text" id="manual-code" placeholder="Ej. 7501000000" style="margin: 0;">
+                </div>
+                <button class="btn-blue" onclick="buscarManual()" style="margin: 0; width: 120px;">CONSULTAR</button>
+            </div>
+        </div>
         
         <div id="result-card" class="card">
             <h2 id="res-nombre" style="margin-bottom: 15px;"></h2>
@@ -149,7 +160,28 @@
 
         const scanner = new Html5Qrcode("reader");
         function initScanner() {
-            scanner.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, (code) => onScan(code));
+            document.getElementById('scan-status').innerText = "Iniciando cámara...";
+            scanner.start(
+                { facingMode: "environment" }, 
+                { fps: 15, qrbox: 250 }, 
+                (decodedText, decodedResult) => {
+                    onScan(decodedText);
+                },
+                (errorMessage) => {
+                    // Silenciamos mensajes de escaneo continuo para evitar spam visual
+                }
+            ).catch(err => {
+                document.getElementById('scan-status').innerText = "❌ Permiso de cámara denegado o no disponible";
+                document.getElementById('scan-status').style.color = "#ef4444";
+                console.error("Error al inicializar cámara: ", err);
+            });
+        }
+
+        // --- BUSCADOR MANUAL ---
+        function buscarManual() {
+            const input = document.getElementById('manual-code').value;
+            if(!input) return alert("Por favor, ingresa un código para buscar");
+            onScan(input);
         }
 
         async function onScan(code) {
@@ -157,11 +189,16 @@
             const resultCard = document.getElementById('result-card');
             const createCard = document.getElementById('create-card');
 
-            // 1. Mostrar estado de proceso
             statusDiv.innerText = "🔍 Consultando sistema...";
             statusDiv.style.color = "#2563eb";
 
-            await scanner.pause(true);
+            if (scanner.getState() !== 3) {
+                // Si está corriendo, pausamos para no hacer lecturas dobles
+                try {
+                    await scanner.pause(true);
+                } catch (e) { /* Ya estaba pausado */ }
+            }
+
             const cleanCode = code.trim().replace(/[^0-9]/g, '');
             currentScannedCode = cleanCode;
 
@@ -185,7 +222,7 @@
                 } else {
                     // Producto no existe
                     document.getElementById('create-id').innerText = `Código detectado: ${cleanCode}`;
-                    // Limpiar el formulario
+                    
                     document.getElementById('new-nombre').value = "";
                     document.getElementById('new-precio').value = "";
                     document.getElementById('new-costo').value = "";
@@ -203,7 +240,7 @@
             } catch (error) {
                 statusDiv.innerText = "⚠️ Error de conexión";
                 statusDiv.style.color = "#ef4444";
-                scanner.resume();
+                if(typeof scanner.resume === 'function') scanner.resume();
             }
         }
 
@@ -256,7 +293,11 @@
             document.getElementById('create-card').style.display = 'none';
             document.getElementById('scan-status').innerText = "Esperando código...";
             document.getElementById('scan-status').style.color = "#64748b";
-            scanner.resume();
+            
+            // Limpia el campo del buscador manual por si se usó
+            document.getElementById('manual-code').value = "";
+            
+            if(typeof scanner.resume === 'function') scanner.resume();
         }
 
         function toggleAdmin() {
