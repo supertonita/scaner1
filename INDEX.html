@@ -140,6 +140,8 @@
         const db = firebase.firestore();
         let userRole = "";
         let currentScannedCode = "";
+        let isProcessing = false;
+        let scanner = null;
 
         function access() {
             const p = document.getElementById('pin').value;
@@ -158,22 +160,26 @@
             initScanner();
         }
 
-        const scanner = new Html5Qrcode("reader");
-
         function initScanner() {
             document.getElementById('scan-status').innerText = "Iniciando cámara...";
             document.getElementById('scan-status').style.color = "#2563eb";
+            isProcessing = false; 
+
+            if (scanner) {
+                try {
+                    scanner.stop().catch(() => {});
+                } catch (e) { /* Ya destruida */ }
+            }
+
+            scanner = new Html5Qrcode("reader");
             
-            // Usar FPS más bajo para mayor estabilidad en el iPhone
             scanner.start(
                 { facingMode: "environment" }, 
                 { fps: 10, qrbox: 200 }, 
                 (decodedText, decodedResult) => {
                     onScan(decodedText);
                 },
-                (errorMessage) => {
-                    // Ocultar mensajes de error repetitivos de lectura para mantener limpio el log
-                }
+                (errorMessage) => { /* Ocultar log repetitivo */ }
             ).catch(err => {
                 document.getElementById('scan-status').innerText = "❌ Permiso de cámara denegado o dispositivo sin cámara";
                 document.getElementById('scan-status').style.color = "#ef4444";
@@ -189,6 +195,9 @@
         }
 
         async function onScan(code) {
+            if (isProcessing) return; 
+            isProcessing = true;
+
             const statusDiv = document.getElementById('scan-status');
             const resultCard = document.getElementById('result-card');
             const createCard = document.getElementById('create-card');
@@ -196,13 +205,8 @@
             statusDiv.innerText = "🔍 Consultando sistema...";
             statusDiv.style.color = "#2563eb";
 
-            // Detenemos por completo la cámara para que no se congele en iOS
-            try {
-                if (scanner && scanner.getState() === 3) {
-                    await scanner.stop();
-                }
-            } catch(e) {
-                console.log("Cámara ya estaba detenida o no disponible", e);
+            if (scanner && scanner.getState() === 3) {
+                scanner.stop().catch(err => console.log("Cámara ya detenida", err));
             }
 
             const cleanCode = code.trim().replace(/[^0-9]/g, '');
@@ -211,7 +215,7 @@
             try {
                 const doc = await db.collection("productos").doc(cleanCode).get();
 
-                if(doc.exists) {
+                if (doc.exists) {
                     const p = doc.data();
                     
                     document.getElementById('res-nombre').innerText = p.nombre || "Sin Nombre";
@@ -226,7 +230,6 @@
                     statusDiv.innerText = "✅ Producto localizado";
                     statusDiv.style.color = "#10b981";
                 } else {
-                    // Producto no existe
                     document.getElementById('create-id').innerText = `Código detectado: ${cleanCode}`;
                     
                     document.getElementById('new-nombre').value = "";
@@ -246,7 +249,7 @@
             } catch (error) {
                 statusDiv.innerText = "⚠️ Error de conexión";
                 statusDiv.style.color = "#ef4444";
-                // En caso de error, reiniciamos la cámara por seguridad
+                isProcessing = false;
                 if (typeof initScanner === 'function') initScanner();
             }
         }
@@ -301,10 +304,9 @@
             document.getElementById('scan-status').innerText = "Esperando código...";
             document.getElementById('scan-status').style.color = "#64748b";
             
-            // Limpia los campos de búsqueda
             document.getElementById('manual-code').value = "";
+            isProcessing = false;
             
-            // Reiniciamos el escáner al cerrar la tarjeta
             initScanner();
         }
 
@@ -317,13 +319,20 @@
         async function downloadExcel() {
             alert("Preparando base de datos, espera un momento...");
             const snapshot = await db.collection("productos").get();
-            const data = snapshot.docs.map(doc => ({
-                Codigo: doc.id,
-                Nombre: doc.data().nombre,
-                Precio_Venta: doc.data().precio,
-                Stock: doc.data().stock,
-                Costo_Compra: doc.data().costo
-            }));
+            const data = snapshot.docs.map(doc => {
+                const p = doc.data();
+                const costo = parseFloat(p.costo || 0);
+                const stock = parseInt(p.stock || 0);
+                
+                return {
+                    Codigo: doc.id,
+                    Nombre: p.nombre,
+                    Precio_Venta: p.precio,
+                    Stock: p.stock,
+                    Costo_Compra: p.costo,
+                    Total: (costo * stock).toFixed(2) // Calcula el total costo x stock
+                };
+            });
 
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
