@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventario Pro - </title>
+    <title>Inventario Pro</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- Librería para exportar a Excel -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
         :root { --p: #2563eb; --s: #10b981; --bg: #f8fafc; }
@@ -26,6 +25,9 @@
         #prog-bar { height: 100%; background: var(--s); width: 0%; transition: width 0.3s; }
         #monitor-consola { background: #0f172a; color: #38bdf8; font-family: monospace; font-size: 0.75rem; padding: 12px; border-radius: 8px; margin-top: 15px; height: 120px; overflow-y: auto; display: none; }
         .user-badge { background: #dbeafe; color: var(--p); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; display: inline-block; }
+        .input-group { margin: 12px 0; text-align: left; }
+        .input-group label { display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 4px; font-weight: 500; }
+        .input-group input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
     </style>
 </head>
 <body>
@@ -45,14 +47,59 @@
         <div id="user-info" class="user-badge" style="display:none;"></div>
         <div id="reader"></div>
         
+        <div id="scan-status" style="margin-top: 15px; font-size: 0.9rem; color: #64748b; text-align: center; height: 20px; font-weight: 500;">
+            Esperando código...
+        </div>
+        
         <div id="result-card" class="card">
-            <h2 id="res-nombre"></h2>
-            <h1 id="res-precio"></h1>
-            <p id="res-stock"></p>
-            <button class="btn-green" onclick="resetScanner()">CONTINUAR</button>
+            <h2 id="res-nombre" style="margin-bottom: 15px;"></h2>
+            
+            <div class="input-group">
+                <label>💰 Precio Venta ($)</label>
+                <input type="number" id="res-precio-input" step="0.01">
+            </div>
+            
+            <div class="input-group">
+                <label>📉 Costo de Compra ($)</label>
+                <input type="number" id="res-costo-input" step="0.01">
+            </div>
+            
+            <div class="input-group">
+                <label>📦 Stock Actual</label>
+                <input type="number" id="res-stock-input">
+            </div>
+            
+            <p id="res-id" style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px;"></p>
+            
+            <button class="btn-blue" onclick="actualizarProducto()">💾 GUARDAR CAMBIOS</button>
+            <button class="btn-gray" onclick="resetScanner()">CONTINUAR</button>
         </div>
 
-        <!-- Solo para Admin -->
+        <div id="create-card" class="card">
+            <h2 style="color: #ef4444; margin-bottom: 15px;">PRODUCTO NO REGISTRADO</h2>
+            <p id="create-id" style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;"></p>
+            
+            <div class="input-group">
+                <label>Nombre del Producto</label>
+                <input type="text" id="new-nombre" placeholder="Ej. Cera de afeitar">
+            </div>
+            <div class="input-group">
+                <label>Precio de Venta ($)</label>
+                <input type="number" id="new-precio" step="0.01" placeholder="0.00">
+            </div>
+            <div class="input-group">
+                <label>Precio de Costo ($)</label>
+                <input type="number" id="new-costo" step="0.01" placeholder="0.00">
+            </div>
+            <div class="input-group">
+                <label>Stock Inicial</label>
+                <input type="number" id="new-stock" value="0">
+            </div>
+            
+            <button class="btn-green" onclick="guardarNuevoProducto()">🚀 AGREGAR PRODUCTO</button>
+            <button class="btn-gray" onclick="resetScanner()">CANCELAR</button>
+        </div>
+
         <button id="admin-btn" style="display:none;" class="btn-gray" onclick="toggleAdmin()">⚙️ PANEL ADMINISTRACIÓN</button>
 
         <div id="admin-panel">
@@ -81,6 +128,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         let userRole = "";
+        let currentScannedCode = "";
 
         function access() {
             const p = document.getElementById('pin').value;
@@ -105,24 +153,109 @@
         }
 
         async function onScan(code) {
+            const statusDiv = document.getElementById('scan-status');
+            const resultCard = document.getElementById('result-card');
+            const createCard = document.getElementById('create-card');
+
+            // 1. Mostrar estado de proceso
+            statusDiv.innerText = "🔍 Consultando sistema...";
+            statusDiv.style.color = "#2563eb";
+
             await scanner.pause(true);
             const cleanCode = code.trim().replace(/[^0-9]/g, '');
-            const doc = await db.collection("productos").doc(cleanCode).get();
-            document.getElementById('result-card').style.display = 'block';
-            if(doc.exists) {
-                const p = doc.data();
-                document.getElementById('res-nombre').innerText = p.nombre;
-                document.getElementById('res-precio').innerText = `$${p.precio}`;
-                document.getElementById('res-stock').innerText = `Stock Actual: ${p.stock}`;
-            } else {
-                document.getElementById('res-nombre').innerText = "NO ENCONTRADO";
-                document.getElementById('res-precio').innerText = "---";
-                document.getElementById('res-stock').innerText = "ID: " + cleanCode;
+            currentScannedCode = cleanCode;
+
+            try {
+                const doc = await db.collection("productos").doc(cleanCode).get();
+
+                if(doc.exists) {
+                    const p = doc.data();
+                    
+                    document.getElementById('res-nombre').innerText = p.nombre || "Sin Nombre";
+                    document.getElementById('res-precio-input').value = p.precio || "0";
+                    document.getElementById('res-costo-input').value = p.costo || "0";
+                    document.getElementById('res-stock-input').value = p.stock || "0";
+                    document.getElementById('res-id').innerText = `ID: ${cleanCode}`;
+
+                    resultCard.style.display = 'block';
+                    createCard.style.display = 'none';
+
+                    statusDiv.innerText = "✅ Producto localizado";
+                    statusDiv.style.color = "#10b981";
+                } else {
+                    // Producto no existe
+                    document.getElementById('create-id').innerText = `Código detectado: ${cleanCode}`;
+                    // Limpiar el formulario
+                    document.getElementById('new-nombre').value = "";
+                    document.getElementById('new-precio').value = "";
+                    document.getElementById('new-costo').value = "";
+                    document.getElementById('new-stock').value = "";
+
+                    createCard.style.display = 'block';
+                    resultCard.style.display = 'none';
+
+                    statusDiv.innerText = "❌ Producto nuevo (No registrado)";
+                    statusDiv.style.color = "#ef4444";
+                }
+
+                if (navigator.vibrate) navigator.vibrate(100);
+
+            } catch (error) {
+                statusDiv.innerText = "⚠️ Error de conexión";
+                statusDiv.style.color = "#ef4444";
+                scanner.resume();
+            }
+        }
+
+        // Modificar o Actualizar producto existente
+        async function actualizarProducto() {
+            const precio = document.getElementById('res-precio-input').value;
+            const costo = document.getElementById('res-costo-input').value;
+            const stock = document.getElementById('res-stock-input').value;
+
+            if(!precio || !costo || !stock) return alert("Por favor, completa todos los campos para continuar");
+
+            try {
+                await db.collection("productos").doc(currentScannedCode).update({
+                    precio: parseFloat(precio).toFixed(2),
+                    costo: parseFloat(costo).toFixed(2),
+                    stock: parseInt(stock)
+                });
+                alert("✅ Producto actualizado correctamente");
+                resetScanner();
+            } catch (err) {
+                alert("❌ Error al actualizar: " + err.message);
+            }
+        }
+
+        // Crear/Agregar nuevo producto
+        async function guardarNuevoProducto() {
+            const nombre = document.getElementById('new-nombre').value;
+            const precio = document.getElementById('new-precio').value;
+            const costo = document.getElementById('new-costo').value;
+            const stock = document.getElementById('new-stock').value;
+
+            if(!nombre || !precio || !costo || !stock) return alert("Por favor, completa todos los campos del nuevo producto");
+
+            try {
+                await db.collection("productos").doc(currentScannedCode).set({
+                    nombre: nombre.trim(),
+                    precio: parseFloat(precio).toFixed(2),
+                    costo: parseFloat(costo).toFixed(2),
+                    stock: parseInt(stock)
+                });
+                alert("🚀 Producto agregado exitosamente a la base de datos");
+                resetScanner();
+            } catch (err) {
+                alert("❌ Error al crear: " + err.message);
             }
         }
 
         function resetScanner() {
             document.getElementById('result-card').style.display = 'none';
+            document.getElementById('create-card').style.display = 'none';
+            document.getElementById('scan-status').innerText = "Esperando código...";
+            document.getElementById('scan-status').style.color = "#64748b";
             scanner.resume();
         }
 
@@ -177,7 +310,6 @@
                         const delim = rows[i].includes(';') ? ';' : ',';
                         const cols = rows[i].split(delim);
                         
-                        // Validar que la primera columna no tenga letras (evita el error de nombre por código)
                         const rawCode = cols[0].trim();
                         if (/[a-zA-Z]/.test(rawCode)) continue; 
 
