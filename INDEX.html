@@ -159,21 +159,25 @@
         }
 
         const scanner = new Html5Qrcode("reader");
+
         function initScanner() {
             document.getElementById('scan-status').innerText = "Iniciando cámara...";
+            document.getElementById('scan-status').style.color = "#2563eb";
+            
+            // Usar FPS más bajo para mayor estabilidad en el iPhone
             scanner.start(
                 { facingMode: "environment" }, 
-                { fps: 15, qrbox: 250 }, 
+                { fps: 10, qrbox: 200 }, 
                 (decodedText, decodedResult) => {
                     onScan(decodedText);
                 },
                 (errorMessage) => {
-                    // Silenciamos mensajes de escaneo continuo para evitar spam visual
+                    // Ocultar mensajes de error repetitivos de lectura para mantener limpio el log
                 }
             ).catch(err => {
-                document.getElementById('scan-status').innerText = "❌ Permiso de cámara denegado o no disponible";
+                document.getElementById('scan-status').innerText = "❌ Permiso de cámara denegado o dispositivo sin cámara";
                 document.getElementById('scan-status').style.color = "#ef4444";
-                console.error("Error al inicializar cámara: ", err);
+                console.error("Error al iniciar cámara: ", err);
             });
         }
 
@@ -192,11 +196,13 @@
             statusDiv.innerText = "🔍 Consultando sistema...";
             statusDiv.style.color = "#2563eb";
 
-            if (scanner.getState() !== 3) {
-                // Si está corriendo, pausamos para no hacer lecturas dobles
-                try {
-                    await scanner.pause(true);
-                } catch (e) { /* Ya estaba pausado */ }
+            // Detenemos por completo la cámara para que no se congele en iOS
+            try {
+                if (scanner && scanner.getState() === 3) {
+                    await scanner.stop();
+                }
+            } catch(e) {
+                console.log("Cámara ya estaba detenida o no disponible", e);
             }
 
             const cleanCode = code.trim().replace(/[^0-9]/g, '');
@@ -240,7 +246,8 @@
             } catch (error) {
                 statusDiv.innerText = "⚠️ Error de conexión";
                 statusDiv.style.color = "#ef4444";
-                if(typeof scanner.resume === 'function') scanner.resume();
+                // En caso de error, reiniciamos la cámara por seguridad
+                if (typeof initScanner === 'function') initScanner();
             }
         }
 
@@ -294,10 +301,11 @@
             document.getElementById('scan-status').innerText = "Esperando código...";
             document.getElementById('scan-status').style.color = "#64748b";
             
-            // Limpia el campo del buscador manual por si se usó
+            // Limpia los campos de búsqueda
             document.getElementById('manual-code').value = "";
             
-            if(typeof scanner.resume === 'function') scanner.resume();
+            // Reiniciamos el escáner al cerrar la tarjeta
+            initScanner();
         }
 
         function toggleAdmin() {
